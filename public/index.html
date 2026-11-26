@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SNYP University</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="login" class="login" hidden>
+  <form id="loginForm" class="card">
+    <h1>SNYP University</h1>
+    <p>Your virtual thesis office. Enter the office password.</p>
+    <input id="pw" type="password" autocomplete="current-password" placeholder="Password" required>
+    <button type="submit">Enter</button>
+    <p id="loginErr" class="err"></p>
+  </form>
+</div>
+
+<div id="app" class="app" hidden>
+  <header>
+    <strong>SNYP University</strong>
+    <span id="storage" class="pill"></span>
+    <span id="ai" class="pill"></span>
+    <span id="leader" class="pill muted"></span>
+  </header>
+  <main>
+    <section class="office">
+      <canvas id="office" aria-label="Three-floor office"></canvas>
+      <div id="who" class="who" hidden></div>
+    </section>
+    <aside class="panel">
+      <nav id="tabs">
+        <button data-tab="reception" class="on">Reception</button>
+        <button data-tab="tickets">Tickets <span id="tcount"></span></button>
+        <button data-tab="meeting">Meeting</button>
+        <button data-tab="docs">Documents</button>
+        <button data-tab="activity">Activity</button>
+        <button data-tab="backup">Backup</button>
+        <button data-tab="settings">Settings</button>
+      </nav>
+      <div id="view"></div>
+    </aside>
+  </main>
+</div>
+
+<script src="js/roster.js"></script>
+<script src="js/world.js"></script>
+<script src="js/api.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/render.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>

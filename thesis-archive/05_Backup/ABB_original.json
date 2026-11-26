@@ -1,0 +1,109 @@
+{
+  "app": "SNYP University",
+  "exportedAt": "2026-11-26T13:43:13.428Z",
+  "state": {
+    "lastCheckedAt": 1795700572637,
+    "lastCheckedFile": "draft skripsi (Pengaruh Trust in AI dan AI Reliance terhadap Minat Investasi Syariah pada Pengguna Artificial Intelligence).docx",
+    "lastCheckedRevision": "951804354c86ceb4c26a0e8f994bd649",
+    "nextNo": 5
+  },
+  "activity": [
+    {
+      "at": 1795700572249,
+      "who": "rina",
+      "text": "Checked draft skripsi (Pengaruh Trust in AI dan AI Reliance terhadap Minat Investasi Syariah pada Pengguna Artificial Intelligence).docx: 8 findings, 3 new tickets"
+    },
+    {
+      "at": 1795700573000,
+      "who": "rina",
+      "text": "Checked draft skripsi (Pengaruh Trust in AI dan AI Reliance terhadap Minat Investasi Syariah pada Pengguna Artificial Intelligence).docx: 8 findings, 1 new tickets"
+    },
+    {
+      "at": 1795700573001,
+      "who": "rina",
+      "text": "Checked draft skripsi (Pengaruh Trust in AI dan AI Reliance terhadap Minat Investasi Syariah pada Pengguna Artificial Intelligence).docx: 8 findings"
+    },
+    {
+      "at": 1795700573001,
+      "who": "rina",
+      "text": "Checked draft skripsi (Pengaruh Trust in AI dan AI Reliance terhadap Minat Investasi Syariah pada Pengguna Artificial Intelligence).docx: 8 findings"
+    },
+    {
+      "at": 1795700573001,
+      "who": "rina",
+      "text": "Checked draft skripsi (Pengaruh Trust in AI dan AI Reliance terhadap Minat Investasi Syariah pada Pengguna Artificial Intelligence).docx: 8 findings"
+    },
+    {
+      "at": 1795700573001,
+      "who": "rina",
+      "text": "Checked draft skripsi (Pengaruh Trust in AI dan AI Reliance terhadap Minat Investasi Syariah pada Pengguna Artificial Intelligence).docx: 8 findings"
+    }
+  ],
+  "tickets": [
+    {
+      "id": "t1",
+      "no": 1,
+      "title": "Unfinished placeholder: [Jumlah sampel: ……… responden. Dasar penentuan jumlah sampel: ………]",
+      "detail": "Temuan pemeriksaan draf otomatis:\n- 3.2.2 Sampel dan Teknik Pengambilan Sampel: Unfinished placeholder: [Jumlah sampel: ……… responden. Dasar penentuan jumlah sampel: ………] (Saran: Replace it with the real content.)\n\nKerjakan perbaikannya dan serahkan teks pengganti yang siap tempel.",
+      "assignee": "stat",
+      "kind": "simple",
+      "priority": "high",
+      "section": "3.2.2",
+      "source": "Draft check",
+      "status": "open",
+      "createdAt": 1795700569430,
+      "night": false,
+      "parent": null
+    },
+    {
+      "id": "t2",
+      "no": 2,
+      "title": "Unfinished placeholder: [BELUM FINAL: sumber skala indikator AI Reliance]",
+      "detail": "Temuan pemeriksaan draf otomatis:\n- 3.4 Definisi Operasional Variabel: Unfinished placeholder: [BELUM FINAL: sumber skala indikator AI Reliance] (Saran: Replace it with the real content.)\n\nKerjakan perbaikannya dan serahkan teks pengganti yang siap tempel.",
+      "assignee": "metod",
+      "kind": "simple",
+      "priority": "high",
+      "section": "3.4",
+      "source": "Draft check",
+      "status": "open",
+      "createdAt": 1795700569430,
+      "night": false,
+      "parent": null
+    },
+    {
+      "id": "t3",
+      "no": 3,
+      "title": "6 of 7 reference entries are incomplete (missing initials, journal, volume, pages or URL): Adinugroho, H; Chen, [inisial…",
+      "detail": "Temuan pemeriksaan draf otomatis:\n- DAFTAR PUSTAKA: 6 of 7 reference entries are incomplete (missing initials, journal, volume, pages or URL): Adinugroho, H; Chen, [inisial], & Ma, [inisial]; [Fahmi, inisial, dan seluruh penulis] ; Haffar, [inisial dan penulis lain] ; Otoritas Jasa Keuangan, Lembaga Pe…. (Saran: Complete each entry in APA 7 from the original article.)\n\nKerjakan perbaikannya dan serahkan teks pengganti yang siap tempel.",
+      "assignee": "lib",
+      "kind": "simple",
+      "priority": "high",
+      "section": "",
+      "source": "Draft check",
+      "status": "open",
+      "createdAt": 1795700569430,
+      "night": false,
+      "parent": null
+    },
+    {
+      "id": "t4",
+      "no": 4,
+      "title": "6 of 7 reference entries are incomplete (missing initials, journal, volume, pages or URL): Adinugroho, H; Chen, [inisial…",
+      "detail": "Temuan pemeriksaan draf otomatis:\n- DAFTAR PUSTAKA: 6 of 7 reference entries are incomplete (missing initials, journal, volume, pages or URL): Adinugroho, H; Chen, [inisial], & Ma, [inisial]; [Fahmi, inisial, dan seluruh penulis] ; Haffar, [inisial dan penulis lain] ; Otoritas Jasa Keuangan, Lembaga Pe…. (Saran: Complete each entry in APA 7 from the original article.)\n\nKerjakan perbaikannya dan serahkan teks pengganti yang siap tempel.",
+      "assignee": "lib",
+      "kind": "simple",
+      "priority": "high",
+      "section": "",
+      "source": "Draft check",
+      "status": "open",
+      "createdAt": 1795700571848,
+      "night": false,
+      "parent": null
+    }
+  ],
+  "meetings": [],
+  "reviews": [],
+  "chats": {
+    "rina": []
+  }
+}
