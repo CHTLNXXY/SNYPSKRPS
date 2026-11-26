@@ -321,23 +321,17 @@
   function move(c, dt) {
     if (!c.path.length) { c.walking = false; return; }
     const n = c.path[0];
-    if (n.stairs) {
+    if (n.stairs) { // fade out at this staircase, fade in at the one on the next floor
       c.walking = true; c.onStairs = true;
       const from = c.f; c.stairT = (c.stairT || 0) + dt / STAIR_TIME;
-      // Walk from the landing onto the flight, climb along the steps, step off at the landing above.
-      const t = Math.min(1, c.stairT), up = n.f > from, L = Wd.STAIR;
-      const lo = { x: 11, y: 2.2 }, hi = { x: 11, y: -0.2 };
-      const a = up ? lo : hi, b = up ? hi : lo, lerp = (p, q, k) => p + (q - p) * k;
-      if (t < 0.12) { const k = t / 0.12; c.x = lerp(L.x, a.x, k); c.y = lerp(L.y, a.y, k); c.z = from; }
-      else if (t < 0.88) { const k = (t - 0.12) / 0.76; c.x = lerp(a.x, b.x, k); c.y = lerp(a.y, b.y, k); c.z = up ? from + k : from - k; }
-      else { const k = (t - 0.88) / 0.12; c.x = lerp(b.x, L.x, k); c.y = lerp(b.y, L.y, k); c.z = n.f; }
-      c.facing = up ? -1 : 1;
-      if (c.stairT >= 1) { ev(c.id, `stairs ${from}->${n.f}`); c.f = n.f; c.z = n.f; c.x = n.x; c.y = n.y; c.stairT = 0; c.onStairs = false; c.path.shift(); }
+      c.alpha = Math.abs(1 - 2 * Math.min(1, c.stairT));
+      if (c.stairT >= 0.5 && c.f === from && !c.switched) { c.switched = true; c.f = n.f; c.z = n.f; c.x = n.x; c.y = n.y; ev(c.id, `stairs ${from}->${n.f}`); }
+      if (c.stairT >= 1) { c.stairT = 0; c.alpha = 1; c.onStairs = false; c.switched = false; c.path.shift(); }
       return;
     }
     c.walking = true; c.z = c.f;
-    const dx = n.x - c.x, dy = n.y - c.y, d = Math.hypot(dx, dy), stepLen = WALK * dt / 1000;
-    if (Math.abs(dx - dy) > 0.01) c.facing = (dx - dy) >= 0 ? 1 : -1;
+    const dx = n.x - c.x, dy = n.y - c.y, d = Math.hypot(dx, dy), stepLen = WALK * Wd.UNIT * dt / 1000;
+    if (Math.abs(dx) > 0.5) c.facing = dx >= 0 ? 1 : -1;
     if (d <= stepLen) { c.x = n.x; c.y = n.y; c.path.shift(); } else { c.x += dx / d * stepLen; c.y += dy / d * stepLen; }
   }
 
