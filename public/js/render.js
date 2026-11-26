@@ -1,228 +1,185 @@
-// Side panel: reception, tickets, meetings, documents, activity, backup, settings. Also boots the app.
+// Draws the office artwork and the people moving in it.
 (function () {
-  const API = window.SNYP_API, R = window.SNYP_ROSTER, SIM = window.SNYP_SIM, RENDER = window.SNYP_RENDER;
-  const $ = (s) => document.querySelector(s);
-  const drafts = {};
-  let tab = (() => { try { return localStorage.getItem('snyp-tab') || 'reception'; } catch (e) { return 'reception'; } })();
-  let docs = null, snaps = null, flash = '';
+  const Wd = window.SNYP_WORLD, R = window.SNYP_ROSTER, SIM = window.SNYP_SIM, API = window.SNYP_API;
+  const CW = Wd.IMG.w, CH = Wd.IMG.h;
+  const STATUS_COLOR = { received: '#b9a37a', delivered: '#e8a33d', authorized: '#4f8fd9', working: '#3f7ac4', ready: '#3aa66a', revision: '#d9534f' };
+  const LOOK = { // caveman outfits matching the artwork
+    rina:     { hair: '#3a2416', style: 'bun',  tunic: '#c8782f' },
+    nadia:    { hair: '#2b1a10', style: 'long', tunic: '#b86a2b' },
+    stat:     { hair: '#24170f', style: 'short', tunic: '#c27a35' },
+    metod:    { hair: '#3b2a1c', style: 'short', tunic: '#a9662c' },
+    lib:      { hair: '#2e1d12', style: 'long', tunic: '#cf8a3e' },
+    director: { hair: '#1f140c', style: 'beard', tunic: '#8f4f22', staff: true },
+    owner:    { hair: '#1a120b', style: 'short', tunic: '#5f7f9c' },
+  };
+  const S = 1.25; // character scale in artwork pixels
 
-  function h(tag, attrs, ...kids) {
-    const el = document.createElement(tag);
-    for (const [k, v] of Object.entries(attrs || {})) {
-      if (k === 'on') for (const [e, f] of Object.entries(v)) el.addEventListener(e, f);
-      else if (k === 'keep') { el.id = v; el.value = drafts[v] || ''; el.addEventListener('input', () => { drafts[v] = el.value; }); }
-      else if (v === true) el.setAttribute(k, ''); else if (v !== false && v != null) el.setAttribute(k, v);
-    }
-    for (const c of kids.flat()) if (c != null && c !== false) el.append(c.nodeType ? c : document.createTextNode(String(c)));
-    return el;
+  let canvas, ctx, dpr = 1, img = null, imgReady = false, imgFailed = false;
+  function setup(el) {
+    canvas = el; ctx = el.getContext('2d');
+    img = new Image(); img.onload = () => { imgReady = true; }; img.onerror = () => { imgFailed = true; }; img.src = Wd.IMG.src;
+    const fit = () => { dpr = Math.min(2, window.devicePixelRatio || 1); canvas.width = CW * dpr; canvas.height = CH * dpr; };
+    fit(); window.addEventListener('resize', fit);
+    canvas.style.aspectRatio = CW + ' / ' + CH;
+    requestAnimationFrame(frame);
   }
-  const name = (w) => (w === 'owner' || w === 'you' ? 'You' : (R.STAFF[w] || { name: w }).name);
-  const when = (t) => new Date(t).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-  const data = () => API.S.data || { tickets: [], meetings: [], activity: [], settings: {}, state: {}, chats: {} };
-  async function run(fn, okMsg) {
-    flash = '';
-    try { await fn(); if (okMsg) flash = okMsg; } catch (e) { flash = '⚠ ' + e.message; }
-    render();
-  }
-  const op = (name, payload, msg) => run(() => API.op(name, 'owner', payload), msg);
+  function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 
-  // ---------- views ----------
-  function reception() {
-    const d = data(), chat = (d.chats.rina || []).slice(-12);
-    return [
-      h('h2', {}, 'Ask Rina at reception'),
-      h('p', { class: 'small' }, 'Describe what you need. Rina reads it, opens a ticket, decides who is responsible and walks it to their desk. Nobody starts until you give the go-ahead.'),
-      h('textarea', { keep: 'req', placeholder: 'e.g. Tolong tentukan jumlah sampel dan dasar penentuannya untuk 3.2.2' }),
-      h('label', { class: 'row small' }, h('input', { type: 'checkbox', id: 'reqNight', style: 'width:auto', checked: !!drafts.night, on: { change: (e) => { drafts.night = e.target.checked; } } }), 'Night Shift ticket (worked only while Night Shift is on)'),
-      h('div', { class: 'row' }, h('select', { id: 'reqPrio', style: 'width:auto' }, h('option', { value: 'normal' }, 'Normal priority'), h('option', { value: 'high' }, 'High priority'), h('option', { value: 'low' }, 'Low priority')),
-        h('button', { class: 'primary', id: 'sendReq', on: { click: sendRequest } }, 'Send to Rina')),
-      chat.length ? h('h3', {}, 'Recent requests') : null,
-      ...chat.reverse().map((c) => h('div', { class: 'small' }, `${when(c.at)} · ${name(c.who)}: ${c.text.slice(0, 160)}`)),
-    ];
-  }
-  async function sendRequest() {
-    const text = (drafts.req || '').trim(); if (!text) return;
-    const night = !!drafts.night, priority = $('#reqPrio').value;
-    await run(async () => {
-      await API.op('chat.add', 'owner', { channel: 'rina', text });
-      const first = text.split('\n')[0];
-      await API.op('ticket.create', 'rina', { title: first.length > 120 ? first.slice(0, 117) + '…' : first, detail: text, priority, night, source: 'Request' });
-      drafts.req = ''; drafts.night = false;
-    }, 'Sent. Watch Rina read it and carry it upstairs.');
-  }
-
-  function ticketCard(t) {
-    const kids = [h('div', { class: 'head' }, h('span', { class: 'no' }, '#' + t.no), h('span', { class: 'title' }, t.title),
-      h('span', { class: 'tag ' + t.status }, R.STATUS[t.status] || t.status), t.priority === 'high' ? h('span', { class: 'tag high' }, 'high') : null, t.night ? h('span', { class: 'tag' }, '☾ night') : null)];
-    kids.push(h('div', { class: 'small' }, `${t.assignee ? name(t.assignee) : 'Unassigned'} · ${t.source || ''}${t.section ? ' · ' + t.section : ''} · updated ${when(t.updatedAt || t.createdAt)}`));
-    const det = h('details', {}, h('summary', { class: 'small' }, 'Details'), h('pre', {}, t.detail || '(no detail)'), t.routeReason ? h('div', { class: 'small' }, 'Routing: ' + t.routeReason) : null);
-    kids.push(det);
-    for (const c of (t.comments || []).slice(-3)) kids.push(h('div', { class: 'note' + (c.kind === 'supervision' ? ' sup' : '') }, `${name(c.who)}${c.kind === 'supervision' ? ' (supervision)' : ''}: ${c.text.replace(/^\[[\w-]+\]\s*/, '')}`));
-    if (t.result) kids.push(h('div', {}, h('div', { class: 'small' }, 'Result'), h('div', { class: 'result' }, t.result)));
-    const acts = h('div', { class: 'row' });
-    if (t.status === 'delivered') acts.append(h('button', { class: 'ok', on: { click: () => op('ticket.transition', { id: t.id, to: 'authorized' }, `#${t.no} authorized.`) } }, 'Give go-ahead'));
-    if (t.status === 'authorized') acts.append(h('button', { on: { click: () => op('ticket.transition', { id: t.id, to: 'delivered' }) } }, 'Withdraw go-ahead'));
-    if (t.status === 'ready') {
-      acts.append(h('button', { class: 'ok', on: { click: () => op('ticket.transition', { id: t.id, to: 'approved' }, `#${t.no} approved.`) } }, 'Approve'));
-      acts.append(h('input', { keep: 'rev-' + t.id, placeholder: 'What should change?', style: 'flex:1 1 160px' }));
-      acts.append(h('button', { on: { click: () => { const note = (drafts['rev-' + t.id] || '').trim(); if (!note) return; op('ticket.transition', { id: t.id, to: 'revision', note }, `#${t.no} sent back.`); } } }, 'Request revision'));
-    }
-    if (t.status === 'working' && !API.S.ai) {
-      kids.push(h('details', {}, h('summary', { class: 'small' }, t.pendingResult ? 'Result handed over, staff is printing it' : 'Hand the result to ' + name(t.assignee)),
-        h('textarea', { keep: 'res-' + t.id, placeholder: 'Paste the finished text (for example from Claude in chat)' }),
-        h('button', { on: { click: () => { const r = (drafts['res-' + t.id] || '').trim(); if (r) op('ticket.handoff', { id: t.id, result: r }, 'Handed over.'); } } }, 'Hand over')));
-    }
-    if (!['closed'].includes(t.status)) {
-      acts.append(h('details', {}, h('summary', { class: 'small' }, 'Close…'), h('input', { keep: 'close-' + t.id, placeholder: 'Reason (e.g. duplicate of #3)' }),
-        h('button', { class: 'bad', on: { click: () => { const note = (drafts['close-' + t.id] || '').trim(); if (!note) { flash = '⚠ Give a reason to close.'; return render(); } if (confirm(`Close ticket #${t.no}? This is recorded in the log.`)) op('ticket.transition', { id: t.id, to: 'closed', note }, `#${t.no} closed.`); } } }, 'Close ticket')));
-    }
-    kids.push(acts);
-    return h('div', { class: 't', 'data-ticket': t.id }, kids);
-  }
-  function tickets() {
-    const d = data(), groups = [['Needs you', ['delivered', 'ready']], ['In the office', ['received', 'authorized', 'working', 'revision']], ['Done', ['approved', 'closed']]];
-    return [h('h2', {}, 'Tickets'), ...groups.map(([label, sts]) => {
-      const list = d.tickets.filter((t) => sts.includes(t.status));
-      return h('div', {}, h('h3', {}, `${label} (${list.length})`), list.length ? list.map(ticketCard) : h('div', { class: 'small' }, 'None.'));
-    })];
+  function caveman(c, now) {
+    const L = LOOK[c.id] || LOOK.owner, st = R.STAFF[c.id] || { name: 'You' };
+    const sitting = !c.walking && ['sit', 'work', 'ready', 'waiting', 'night-wait'].includes(c.pose);
+    const x = c.x, y = c.y, f = c.facing || 1;
+    ctx.save(); ctx.globalAlpha = c.alpha == null ? 1 : c.alpha;
+    ctx.translate(x, y); ctx.scale(S, S);
+    const bob = c.walking ? Math.abs(Math.sin(now / 120)) * 2 : 0, sw = c.walking ? Math.sin(now / 120) * 5 : 0;
+    ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(0, 0, 13, 5, 0, 0, 7); ctx.fill();
+    const skin = '#e3a878', skinD = '#c98b5e';
+    // legs
+    ctx.strokeStyle = skinD; ctx.lineWidth = 5; ctx.lineCap = 'round';
+    if (sitting) { ctx.beginPath(); ctx.moveTo(-4, -14); ctx.lineTo(4 * f + -4, -8); ctx.lineTo(4 * f - 4, 0); ctx.moveTo(4, -14); ctx.lineTo(4 * f + 6, -8); ctx.lineTo(4 * f + 6, 0); ctx.stroke(); }
+    else { ctx.beginPath(); ctx.moveTo(-4, -16); ctx.lineTo(-4 + sw, -1); ctx.moveTo(4, -16); ctx.lineTo(4 - sw, -1); ctx.stroke(); }
+    const top = (sitting ? -40 : -46) - bob;
+    // tunic with leopard spots
+    ctx.fillStyle = L.tunic; ctx.beginPath(); ctx.moveTo(-10, top + 10); ctx.lineTo(10, top + 8); ctx.lineTo(12, top + 30); ctx.lineTo(-12, top + 32); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(60,30,10,.75)';
+    for (const [sx, sy] of [[-6, 16], [3, 13], [7, 22], [-3, 25], [-8, 27], [5, 29]]) { ctx.beginPath(); ctx.ellipse(sx, top + sy, 1.8, 1.3, 0, 0, 7); ctx.fill(); }
+    // arms
+    ctx.strokeStyle = skin; ctx.lineWidth = 4.5;
+    const work = c.pose === 'work' && !c.walking ? Math.sin(now / 90) * 3 : 0;
+    ctx.beginPath(); ctx.moveTo(-10, top + 13); ctx.lineTo(-13 + (c.walking ? -sw : 6 * f), top + 26 + work); ctx.moveTo(10, top + 13); ctx.lineTo(13 + (c.walking ? sw : 6 * f), top + 26 - work); ctx.stroke();
+    if (L.staff) { ctx.strokeStyle = '#7a5a33'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(15 * f, top - 6); ctx.lineTo(15 * f, 0); ctx.stroke(); ctx.fillStyle = '#cfcfcf'; ctx.beginPath(); ctx.moveTo(15 * f, top - 14); ctx.lineTo(12 * f, top - 5); ctx.lineTo(18 * f, top - 5); ctx.fill(); }
+    // head
+    ctx.fillStyle = skin; ctx.beginPath(); ctx.arc(0, top - 2, 10, 0, 7); ctx.fill();
+    ctx.fillStyle = '#2a1a10'; ctx.beginPath(); ctx.arc(3 * f, top - 2, 1.4, 0, 7); ctx.arc(-3 * f + 6 * f, top - 2, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = L.hair;
+    ctx.beginPath(); ctx.arc(0, top - 5, 10.5, Math.PI * 1.02, Math.PI * 1.98); ctx.fill();
+    if (L.style === 'bun') { ctx.beginPath(); ctx.arc(-2 * f, top - 15, 4.5, 0, 7); ctx.fill(); }
+    if (L.style === 'long') { ctx.fillRect(-11, top - 6, 4, 16); ctx.fillRect(7, top - 6, 4, 16); }
+    if (L.style === 'beard') { ctx.beginPath(); ctx.arc(0, top + 3, 8, 0, Math.PI); ctx.fill(); }
+    if (c.carrying) { ctx.fillStyle = '#f3ead6'; ctx.strokeStyle = '#8a7350'; ctx.lineWidth = 1; ctx.fillRect(8 * f - 6, top + 16, 13, 10); ctx.strokeRect(8 * f - 6, top + 16, 13, 10); ctx.fillStyle = '#b5472f'; ctx.fillRect(8 * f - 6, top + 16, 13, 2.5); }
+    ctx.restore();
+    const headY = y + (top - 14) * S;
+    const badge = { ready: ['#3aa66a', '✓'], waiting: ['#e8a33d', '?'], 'night-wait': ['#3c4f80', '☾'] }[c.pose] || (c.pose === 'work' && !c.walking ? ['#3f7ac4', '…'] : null);
+    let by = headY - 6;
+    if (badge) { by = headY - 14 - (c.pose === 'ready' ? Math.abs(Math.sin(now / 300)) * 5 : 0); ctx.fillStyle = badge[0]; ctx.beginPath(); ctx.arc(x, by, 10, 0, 7); ctx.fill(); ctx.fillStyle = '#fff'; ctx.font = '700 13px system-ui'; ctx.textAlign = 'center'; ctx.fillText(badge[1], x, by + 4.5); by -= 12; }
+    // name tag
+    ctx.font = '700 12px system-ui'; ctx.textAlign = 'center';
+    const tw = ctx.measureText(st.name).width + 10;
+    ctx.fillStyle = 'rgba(30,20,10,.72)'; roundRect(x - tw / 2, y + 6, tw, 16, 8); ctx.fill();
+    ctx.fillStyle = '#ffe9c4'; ctx.fillText(st.name, x, y + 18);
+    if (c.bubble) bubble(x, by, c.bubble.text);
   }
 
-  function meeting() {
-    const d = data(), m = d.meetings.find((x) => x.status !== 'ended');
-    const past = d.meetings.filter((x) => x.status === 'ended').slice(-5).reverse();
-    const out = [h('h2', {}, 'Rooftop meeting')];
-    if (!m) {
-      out.push(h('p', { class: 'small' }, 'Everyone stops safely, walks up to the rooftop and sits at the table. You take the head seat. Each role gives its view, Nadia writes the minutes, and action items can become tickets.'),
-        h('input', { keep: 'mtopic', placeholder: 'Topic, e.g. Progress BAB III' }), h('textarea', { keep: 'magenda', placeholder: 'Agenda (optional)' }),
-        h('button', { class: 'primary', id: 'callMeeting', on: { click: () => run(async () => { await API.op('meeting.create', 'owner', { topic: drafts.mtopic || 'General meeting', agenda: drafts.magenda || '' }); drafts.mtopic = ''; drafts.magenda = ''; }, 'Meeting called.') } }, 'Call meeting'));
-    } else {
-      const label = { called: 'Calling everyone…', gathering: 'Staff are walking to the rooftop', in_session: 'In session', minutes: 'Nadia is writing the minutes', ended: 'Ended' }[m.status];
-      out.push(h('div', { class: 'row' }, h('strong', {}, m.topic), h('span', { class: 'tag' }, label)));
-      if (m.agenda) out.push(h('div', { class: 'small' }, m.agenda));
-      out.push(...m.contributions.map((c) => h('div', { class: 'note' }, h('strong', {}, name(c.who) + ': '), c.text)));
-      if (m.status === 'in_session') {
-        out.push(h('textarea', { keep: 'msay', placeholder: 'Your contribution. Lines starting with "Action:" become action items (add @stat, @metod, @lib or @nadia).' }),
-          h('div', { class: 'row' }, h('button', { on: { click: () => { const t = (drafts.msay || '').trim(); if (t) run(async () => { await API.op('meeting.contribute', 'owner', { id: m.id, text: t }); drafts.msay = ''; }); } } }, 'Say'),
-            h('button', { class: 'primary', id: 'wrapUp', on: { click: () => op('meeting.transition', { id: m.id, to: 'minutes' }) } }, 'Wrap up: minutes')));
-      }
-      if (m.minutes) {
-        out.push(h('h3', {}, 'Minutes (Nadia)'), h('pre', {}, m.minutes), h('h3', {}, 'Action items'));
-        if (!m.actions.length) out.push(h('div', { class: 'small' }, 'No action items.'));
-        m.actions.forEach((a, i) => out.push(h('div', { class: 'row' }, h('span', { style: 'flex:1' }, `${a.text} → ${a.assignee ? name(a.assignee) : 'Rina decides'}`),
-          a.ticket ? h('span', { class: 'tag' }, 'ticket ' + a.ticket) : h('button', { 'data-action': i, on: { click: () => op('meeting.actionToTicket', { id: m.id, index: i }, 'Ticket created at reception.') } }, 'Make ticket'))));
-        out.push(h('details', {}, h('summary', { class: 'small' }, 'Edit action items'), h('textarea', { keep: 'mact', placeholder: 'One per line: text @stat' }),
-          h('button', { on: { click: () => { const actions = (drafts.mact || '').split('\n').map((l) => l.trim()).filter(Boolean).map((l) => { const at = l.match(/@(nadia|stat|metod|lib)\b/); return { text: l.replace(/@\w+/, '').trim(), assignee: at ? at[1] : R.routeRequest(l).assignee }; }); op('meeting.minutes', { id: m.id, minutes: m.minutes, actions: [...m.actions, ...actions] }, 'Action items added.'); drafts.mact = ''; } } }, 'Add items')));
-      }
-      out.push(h('button', { class: m.minutes ? 'primary' : 'bad', id: 'endMeeting', on: { click: () => { if (m.minutes || confirm('End the meeting before minutes are written?')) op('meeting.transition', { id: m.id, to: 'ended' }, 'Meeting ended.'); } } }, 'End meeting'));
-    }
-    if (past.length) out.push(h('h3', {}, 'Past meetings'), ...past.map((p) => h('details', {}, h('summary', {}, `${when(p.createdAt)} · ${p.topic}`), h('pre', {}, p.minutes || '(no minutes)'))));
-    return out;
+  function bubble(x, y, text) {
+    ctx.font = '14px system-ui, sans-serif';
+    const words = String(text).split(/\s+/), lines = []; let cur = '';
+    for (const w of words) { const t = cur ? cur + ' ' + w : w; if (ctx.measureText(t).width > 210) { lines.push(cur); cur = w; } else cur = t; if (lines.length === 3) break; }
+    if (lines.length < 3 && cur) lines.push(cur); else if (lines.length === 3) lines[2] = lines[2].replace(/\s*\S*$/, '') + '…';
+    const w = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 16, h = lines.length * 17 + 10;
+    const bx = Math.max(6, Math.min(CW - w - 6, x - w / 2)), byy = Math.max(4, y - h - 6);
+    ctx.fillStyle = 'rgba(255,250,240,.97)'; ctx.strokeStyle = '#8a6b45'; ctx.lineWidth = 1.5; roundRect(bx, byy, w, h, 8); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - 5, byy + h); ctx.lineTo(x, byy + h + 7); ctx.lineTo(x + 5, byy + h); ctx.fill();
+    ctx.fillStyle = '#2b1d12'; ctx.textAlign = 'left'; lines.forEach((l, i) => ctx.fillText(l, bx + 8, byy + 19 + i * 17));
   }
 
-  function documents() {
-    const out = [h('h2', {}, 'Thesis document archive'), h('div', { class: 'row' },
-      h('button', { on: { click: loadDocs } }, docs ? 'Refresh list' : 'Load archive'),
-      h('button', { class: 'primary', id: 'draftCheck', on: { click: () => run(async () => { const r = await API.req('POST', '/api/draftcheck', {}); await API.refresh(true); flash = `Draft check: ${r.findings.length} findings, ${r.created.length} new ticket(s)${r.unchanged ? ' (draft unchanged since last check)' : ''}.`; }) } }, 'Run draft check'))];
-    const st = data().state;
-    if (st.lastCheckedFile) out.push(h('div', { class: 'small' }, `Last check: ${st.lastCheckedFile.slice(0, 60)}… on ${when(st.lastCheckedAt)}`));
-    if (docs && docs.error) out.push(h('div', { class: 'err' }, docs.error));
-    if (docs && docs.files) {
-      const by = {};
-      for (const f of docs.files) (by[f.path.split('/')[0]] = by[f.path.split('/')[0]] || []).push(f);
-      out.push(h('div', { class: 'small' }, `${docs.files.length} files · source: ${docs.mode === 'github' ? 'private GitHub archive' : 'local folder'}`));
-      for (const [folder, files] of Object.entries(by)) out.push(h('details', { class: 'files', open: folder.startsWith('0') && files.length < 6 }, h('summary', {}, `${folder} (${files.length})`),
-        ...files.map((f) => h('a', { href: '/api/docs?path=' + encodeURIComponent(f.path), target: '_blank', rel: 'noopener' }, `${f.path.split('/').slice(1).join('/') || f.path} · ${(f.size / 1024).toFixed(0)} KB`))));
-    }
-    return out;
-  }
-  async function loadDocs() { try { docs = await API.req('GET', '/api/docs'); } catch (e) { docs = { error: e.message }; } render(); }
-
-  function activity() {
-    const d = data();
-    return [h('h2', {}, 'Activity log'), h('div', { class: 'log' }, ...d.activity.slice(0, 150).map((a) => h('div', {}, h('span', { class: 'small' }, when(a.at) + ' · '), h('strong', {}, name(a.who) + ' '), a.text)))];
-  }
-
-  function backup() {
-    return [h('h2', {}, 'Backup and restore'),
-      h('p', { class: 'small' }, 'ABB.json holds all app data: tickets, logs, meetings, reviews and settings. Thesis documents are backed up separately in the archive. A snapshot is saved automatically every day and before every restore.'),
-      h('a', { href: '/api/backup', download: 'ABB.json' }, h('button', { class: 'primary' }, 'Export ABB.json')),
-      h('h3', {}, 'Restore from ABB.json'),
-      h('input', { type: 'file', accept: '.json,application/json', id: 'importFile' }),
-      h('button', { id: 'importBtn', on: { click: importFile } }, 'Restore this file'),
-      h('h3', {}, 'Automatic snapshots'),
-      h('button', { on: { click: async () => { try { snaps = (await API.req('GET', '/api/backup?list=1')).snapshots; } catch (e) { snaps = []; flash = '⚠ ' + e.message; } render(); } } }, 'Show snapshots'),
-      ...(snaps || []).map((s) => h('div', { class: 'row' }, h('span', { style: 'flex:1' }, s),
-        h('a', { href: '/api/backup?snapshot=' + encodeURIComponent(s) }, 'download'),
-        h('button', { on: { click: () => { if (confirm('Restore snapshot ' + s + '? Current data is snapshotted first.')) run(async () => { await API.req('POST', '/api/backup', { snapshot: s }); await API.refresh(true); }, 'Snapshot restored.'); } } }, 'Restore')))];
-  }
-  async function importFile() {
-    const f = $('#importFile').files[0]; if (!f) return;
-    let parsed; try { parsed = JSON.parse(await f.text()); } catch (e) { flash = '⚠ Not a valid JSON file.'; return render(); }
-    if (!confirm(`Restore ${parsed.tickets ? parsed.tickets.length : 0} tickets from ${f.name}? Current data is saved as a snapshot first.`)) return;
-    run(async () => { const r = await API.req('POST', '/api/backup', { data: parsed }); await API.refresh(true); flash = `Restored ${r.tickets} tickets. Previous data saved as snapshot ${r.snapshot}.`; });
-  }
-
-  function settings() {
-    const s = data().settings;
-    return [h('h2', {}, 'Settings'),
-      h('label', { class: 'row' }, h('input', { type: 'checkbox', id: 'nightToggle', style: 'width:auto', checked: !!s.nightShift, on: { change: (e) => op('settings.set', { key: 'nightShift', value: e.target.checked }) } }), 'Night Shift on (office goes dark; night tickets get worked)'),
-      h('div', { class: 'small' }, 'Storage: ' + (API.S.mode === 'server' ? 'Upstash Redis on the server, shared by all your devices.' : 'LOCAL TEST MODE: a file on this computer only. Deploy to Vercel with Upstash for real storage.')),
-      h('div', { class: 'small' }, 'AI: ' + (API.S.ai ? 'on (ANTHROPIC_API_KEY set). Staff draft results and meeting views with Claude.' : 'off. Rina routes by keywords; staff wait for you to hand them results.')),
-      h('div', { class: 'small' }, 'This device: ' + (API.S.leader ? 'drives the office (leader).' : 'watching. Another open device is driving the office.')),
-      h('button', { on: { click: async () => { await API.logout(); location.reload(); } } }, 'Log out')];
-  }
-
-  const VIEWS = { reception, tickets, meeting, docs: documents, activity, backup, settings };
-  function render() {
-    const v = $('#view'); if (!v) return;
-    const focus = document.activeElement && document.activeElement.id;
-    const scroll = v.scrollTop;
-    const openDetails = [...v.querySelectorAll('details')].map((d, i) => d.open ? i : -1).filter((i) => i >= 0);
-    v.replaceChildren(...(flash ? [h('div', { class: flash.startsWith('⚠') ? 'err' : 'small', id: 'flash' }, flash)] : []), ...VIEWS[tab]().flat().filter((x) => x != null && x !== false));
-    [...v.querySelectorAll('details')].forEach((d, i) => { if (openDetails.includes(i)) d.open = true; });
-    v.scrollTop = scroll;
-    if (focus && document.getElementById(focus)) document.getElementById(focus).focus();
-    document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
-    const need = data().tickets.filter((t) => ['delivered', 'ready'].includes(t.status)).length;
-    $('#tcount').textContent = need ? `(${need})` : '';
-    $('#storage').textContent = API.S.mode === 'server' ? 'Saved on server · shared across devices' : API.S.mode === 'local' ? 'LOCAL TEST MODE · this computer only' : 'Connecting…';
-    $('#storage').classList.toggle('warn', API.S.mode !== 'server');
-    $('#ai').textContent = API.S.ai ? 'AI on' : 'AI off';
-    $('#leader').textContent = API.S.online ? (API.S.leader ? 'This device drives the office' : 'Watching') : 'Offline: ' + API.S.error;
-  }
-
-  document.addEventListener('click', (e) => { const b = e.target.closest('#tabs button'); if (b) { tab = b.dataset.tab; flash = ''; try { localStorage.setItem('snyp-tab', tab); } catch (err) { /* ignore */ } if (tab === 'docs' && !docs) loadDocs(); render(); } });
-
-  // Character inspector.
-  function inspect(evt) {
-    if (RENDER.onScreen && RENDER.onScreen(evt)) { tab = (data().meetings || []).some((m) => m.status !== 'ended') ? 'meeting' : 'tickets'; flash = ''; render(); return; }
-    const c = RENDER.hit(evt), box = $('#who');
-    if (!c) { box.hidden = true; return; }
-    const st = R.STAFF[c.id] || { name: 'You', role: 'Student' };
-    const mine = data().tickets.filter((t) => t.assignee === c.id && !['closed', 'approved'].includes(t.status));
-    box.replaceChildren(h('strong', {}, `${st.name} · ${st.role}`), h('div', { class: 'small' }, c.jobName ? 'Doing: ' + c.jobName : 'At their spot'),
-      ...mine.map((t) => h('div', { class: 'small' }, `#${t.no} ${R.STATUS[t.status]}`)));
-    box.hidden = false;
-  }
-
-  async function boot() {
-    let ok = false;
-    try { ok = await API.isLoggedIn(); } catch (e) { $('#loginErr').textContent = e.message; }
-    if (!ok) {
-      $('#login').hidden = false;
-      $('#loginForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        try { await API.login($('#pw').value); location.reload(); } catch (err) { $('#loginErr').textContent = err.message; }
+  function papers(data) {
+    for (const [who, [px, py]] of Object.entries(Wd.DESK_PAPERS)) {
+      const mine = data.tickets.filter((t) => t.assignee === who && STATUS_COLOR[t.status]);
+      mine.slice(0, 5).forEach((t, i) => {
+        const x = px + i * 4, y = py - i * 4;
+        ctx.fillStyle = '#f3ead6'; ctx.strokeStyle = '#8a7350'; ctx.lineWidth = 1; ctx.fillRect(x - 8, y - 6, 16, 11); ctx.strokeRect(x - 8, y - 6, 16, 11);
+        ctx.fillStyle = STATUS_COLOR[t.status]; ctx.fillRect(x - 8, y - 6, 16, 3);
       });
-      return;
+      if (mine.length) { ctx.font = '700 11px system-ui'; ctx.textAlign = 'center'; const label = mine.map((t) => '#' + t.no).join(' '); const tw = ctx.measureText(label).width + 8; ctx.fillStyle = 'rgba(30,20,10,.7)'; roundRect(px - tw / 2, py + 8, tw, 15, 7); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillText(label, px, py + 19); }
     }
-    $('#app').hidden = false;
-    RENDER.setup($('#office'));
-    $('#office').addEventListener('click', inspect);
-    API.on(() => { if (API.S.loggedOut) location.reload(); render(); });
-    API.start();
-    render();
   }
-  boot();
-  window.SNYP_UI = { render };
+
+  // The rooftop's big white screen shows a live report. Drawn in a flat 640x280 box, then
+  // skewed onto the screen's parallelogram in the artwork.
+  const SCR = { x: 783, y: 54, ux: [306, 39], vy: 134, W: 640, H: 280 };
+  const SHORT = { received: 'Di resepsionis', delivered: 'Tunggu izin', authorized: 'Diizinkan', working: 'Dikerjakan', ready: 'Siap disetujui', revision: 'Revisi', approved: 'Disetujui', closed: 'Ditutup' };
+  function clip(t, n) { t = String(t || '').replace(/\s+/g, ' '); return t.length > n ? t.slice(0, n - 1) + '…' : t; }
+  function screen(data) {
+    const W = SCR.W, H = SCR.H;
+    ctx.save();
+    ctx.transform(SCR.ux[0] / W, SCR.ux[1] / W, 0, SCR.vy / H, SCR.x, SCR.y);
+    ctx.fillStyle = 'rgba(250,246,238,.96)'; ctx.fillRect(0, 0, W, H);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    const m = (data.meetings || []).find((x) => x.status !== 'ended');
+    const tickets = data.tickets || [];
+    ctx.fillStyle = '#5a3416'; ctx.fillRect(0, 0, W, 40);
+    ctx.fillStyle = '#ffe9c2'; ctx.font = '700 24px system-ui';
+    ctx.fillText(m ? clip('Rapat: ' + m.topic, 44) : 'Laporan SNYP University', 14, 28);
+    if (m) {
+      let y = 70;
+      const lines = m.minutes ? m.minutes.split('\n').filter(Boolean) : (m.contributions || []).map((c) => ((R.STAFF[c.who] || { name: 'You' }).name) + ': ' + c.text);
+      ctx.fillStyle = '#7a5530'; ctx.font = '600 17px system-ui'; ctx.fillText(m.minutes ? 'Notulen (Nadia)' : 'Diskusi', 14, y - 8 - 6); 
+      ctx.font = '18px system-ui'; ctx.fillStyle = '#2b1d12';
+      for (const l of lines.slice(-6)) { ctx.fillText(clip(l, 62), 14, y + 10); y += 28; }
+      if ((m.actions || []).length) { ctx.fillStyle = '#a3461f'; ctx.font = '700 18px system-ui'; ctx.fillText(clip('Action: ' + m.actions.map((a) => a.text).join(' · '), 60), 14, H - 14); }
+    } else {
+      const open = tickets.filter((t) => !['approved', 'closed'].includes(t.status));
+      const groups = ['received', 'delivered', 'working', 'ready', 'revision'].map((k) => [k, tickets.filter((t) => t.status === k || (k === 'working' && t.status === 'authorized')).length]);
+      const done = tickets.length - open.length;
+      let x = 14;
+      for (const [k, n] of groups.concat([['approved', done]])) {
+        const col = STATUS_COLOR[k] || '#3aa66a';
+        ctx.fillStyle = col; ctx.font = '800 34px system-ui'; ctx.fillText(String(n), x, 84);
+        ctx.fillStyle = '#5b4632'; ctx.font = '600 13px system-ui'; ctx.fillText(k === 'approved' ? 'Selesai' : SHORT[k], x, 102);
+        x += 104;
+      }
+      let y = 134;
+      ctx.font = '600 16px system-ui'; ctx.fillStyle = '#7a5530';
+      ctx.fillText(open.length ? `Tiket terbuka (${open.length})` : 'Tidak ada tiket terbuka', 14, y - 8);
+      for (const t of open.sort((a, b) => a.no - b.no).slice(0, 5)) {
+        ctx.fillStyle = STATUS_COLOR[t.status] || '#888'; ctx.fillRect(14, y + 2, 10, 18);
+        ctx.fillStyle = '#2b1d12'; ctx.font = '700 17px system-ui'; ctx.fillText('#' + t.no, 30, y + 17);
+        ctx.font = '17px system-ui'; ctx.fillText(clip(`${(R.STAFF[t.assignee] || { name: '?' }).name} · ${t.title}`, 44), 70, y + 17);
+        ctx.fillStyle = '#7a5530'; ctx.font = '600 14px system-ui'; ctx.textAlign = 'right'; ctx.fillText(SHORT[t.status] || t.status, W - 12, y + 17); ctx.textAlign = 'left';
+        y += 26;
+      }
+      const st = data.state || {};
+      if (st.lastCheckedAt) { ctx.fillStyle = '#8a6d4d'; ctx.font = '13px system-ui'; ctx.fillText(clip('Cek draf terakhir: ' + new Date(st.lastCheckedAt).toLocaleString('id-ID') + ' · ' + st.lastCheckedFile, 80), 14, H - 8); }
+    }
+    ctx.restore();
+  }
+  function onScreen(evt) {
+    const r = canvas.getBoundingClientRect(), mx = (evt.clientX - r.left) * CW / r.width, my = (evt.clientY - r.top) * CH / r.height;
+    const u = (mx - SCR.x) / SCR.ux[0]; const v = (my - SCR.y - u * SCR.ux[1]) / SCR.vy;
+    return u >= 0 && u <= 1 && v >= 0 && v <= 1;
+  }
+
+  function frame() {
+    const now = performance.now();
+    const data = API.S.data || { tickets: [], settings: {}, meetings: [] };
+    const night = !!data.settings.nightShift;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = night ? '#0d0f18' : '#1b1612'; ctx.fillRect(0, 0, CW, CH);
+    if (imgReady) ctx.drawImage(img, 0, 0, CW, CH);
+    else if (imgFailed) { ctx.save(); ctx.fillStyle = '#ffcf7a'; ctx.font = 'bold 30px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('Gambar kantor tidak ditemukan: public/' + Wd.IMG.src, CW / 2, CH / 2 - 20);
+      ctx.font = '22px sans-serif'; ctx.fillText('Upload office.webp ke folder public/img/ di GitHub, lalu tunggu redeploy.', CW / 2, CH / 2 + 20); ctx.restore(); }
+    ctx.font = '700 16px system-ui'; ctx.textAlign = 'left';
+    for (const F of Wd.FLOORS) { ctx.fillStyle = 'rgba(0,0,0,.55)'; const tw = ctx.measureText(F.name).width + 16; roundRect(F.label[0] - 8, F.label[1] - 17, tw, 24, 12); ctx.fill(); ctx.fillStyle = '#ffe2b0'; ctx.fillText(F.name, F.label[0], F.label[1]); }
+    screen(data);
+    papers(data);
+    const chars = Object.values(SIM.chars).filter((c) => c.visible).sort((a, b) => a.y - b.y);
+    for (const c of chars) caveman(c, now);
+    if (night) {
+      ctx.fillStyle = 'rgba(10,15,45,.45)'; ctx.fillRect(0, 0, CW, CH);
+      ctx.globalCompositeOperation = 'lighter';
+      for (const [lx, ly] of Wd.LIGHTS) { const g = ctx.createRadialGradient(lx, ly, 2, lx, ly, 110); g.addColorStop(0, 'rgba(255,170,60,.35)'); g.addColorStop(1, 'rgba(255,170,60,0)'); ctx.fillStyle = g; ctx.fillRect(lx - 110, ly - 110, 220, 220); }
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = '#ffe9a8'; ctx.font = '700 18px system-ui'; ctx.textAlign = 'right'; ctx.fillText('☾ Night Shift', CW - 16, 28);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function hit(evt) {
+    const r = canvas.getBoundingClientRect(), mx = (evt.clientX - r.left) * CW / r.width, my = (evt.clientY - r.top) * CH / r.height;
+    let best = null, bd = 40;
+    for (const c of Object.values(SIM.chars)) { if (!c.visible) continue; const d = Math.hypot(mx - c.x, my - (c.y - 30)); if (d < bd) { bd = d; best = c; } }
+    return best;
+  }
+  window.SNYP_RENDER = { setup, hit, onScreen, CW, CH };
 })();
