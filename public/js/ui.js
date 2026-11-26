@@ -195,6 +195,7 @@
 
   // Character inspector.
   function inspect(evt) {
+    if (RENDER.onScreen && RENDER.onScreen(evt)) { tab = (data().meetings || []).some((m) => m.status !== 'ended') ? 'meeting' : 'tickets'; flash = ''; render(); return; }
     const c = RENDER.hit(evt), box = $('#who');
     if (!c) { box.hidden = true; return; }
     const st = R.STAFF[c.id] || { name: 'You', role: 'Student' };
