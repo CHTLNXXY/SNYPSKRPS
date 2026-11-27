@@ -27,7 +27,7 @@ Status: built and tested locally, 26 Nov 2026. Nothing here is "working" until t
 |---|---|
 | What Night Shift did | Tickets flagged `night` queue for an after-hours shift: office goes dark, night staff work them, results still wait for your approval |
 | Names of `stat`, `metod`, `lib`, Nadia's id, the Director | Statistician, Methodologist, Librarian, Nadia (secretary), Director |
-| AI "brain" (Anthropic API key) | App works without it using rule-based routing and templates. With `ANTHROPIC_API_KEY` set in Vercel, Rina's analysis, staff drafts and meeting contributions use Claude |
+| AI "brain" (API keys) | App works without it using rule-based routing and templates. With any of `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY` or `OPENROUTER_API_KEY` set in Vercel, Rina's analysis, staff drafts and meeting contributions use AI (`lib/llm.js` picks the provider per staff member; the Librarian uses Gemini with Google Search) |
 | Original visual style | New isometric style, same floor layout |
 
 ## 2. Architecture
@@ -50,7 +50,7 @@ Rules:
 - Character positions are never stored. They are computed in the browser from ticket and meeting states, so every device shows the same story and storage stays small.
 - Every change is a named operation (`ticket.create`, `ticket.update`, `meeting.start`…) applied on the server, so two devices never overwrite each other's work.
 - No staff member, the Director included, can approve or change thesis files. Approval is a button only you press, behind the login.
-- Secrets live only in Vercel environment variables: `APP_PASSWORD`, `SESSION_SECRET`, `UPSTASH_REDIS_REST_URL/TOKEN`, optional `ANTHROPIC_API_KEY`.
+- Secrets live only in Vercel environment variables: `APP_PASSWORD`, `SESSION_SECRET`, `UPSTASH_REDIS_REST_URL/TOKEN`, optional `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`.
 
 ### Three kinds of data, kept apart
 | Kind | Lives in | Backed up by |

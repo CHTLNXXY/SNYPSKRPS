@@ -35,7 +35,22 @@ Vercel project → Settings → **Environment Variables** → add:
 |---|---|
 | `APP_PASSWORD` | the office password you will type to log in |
 | `SESSION_SECRET` | any random text, 40+ characters |
-| `ANTHROPIC_API_KEY` | optional, from console.anthropic.com. Turns on the AI brain (paid per use). Leave out to run without AI |
+| `ANTHROPIC_API_KEY` | optional, from console.anthropic.com. Claude, paid per use |
+| `GEMINI_API_KEY` | optional, **free**, from aistudio.google.com → Get API key. The Librarian uses it with Google Search to check references |
+| `GROQ_API_KEY` | optional, **free**, from console.groq.com → API Keys. Fast open models for chat and meetings |
+| `OPENROUTER_API_KEY` | optional, **free models**, from openrouter.ai → Keys |
+
+Any one AI key turns on the AI brain. Leave them all out to run without AI.
+With several keys, each staff member uses the first that works in this order: Claude, Gemini, Groq, OpenRouter
+(the Librarian tries Gemini first). If one hits its free limit, the next one answers.
+
+Optional fine-tuning (only if you want it):
+| Name | Example | What it does |
+|---|---|---|
+| `SNYP_AI_<STAFF>` | `SNYP_AI_STAT=groq` | Pick the provider for one staff member: `RINA`, `NADIA`, `STAT`, `METOD`, `LIB` |
+| `GEMINI_MODEL` / `GROQ_MODEL` / `OPENROUTER_MODEL` | `gemini-flash-latest` | Change the model if a default is retired |
+
+Free tiers: Google may use what you send on Gemini's free tier to improve its products, and that includes thesis text.
 
 Keep the existing Upstash variables (`KV_REST_API_*` or `UPSTASH_REDIS_REST_*`). Both names work.
 Secrets live only in Vercel: never in the code, the repo, the browser or a chat.

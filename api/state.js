@@ -4,6 +4,7 @@ const { getStore } = require('../lib/store');
 const { requireAuth } = require('../lib/auth');
 const { applyOp, readAll, getVersion } = require('../lib/ops');
 const { body, fail } = require('../lib/http');
+const llm = require('../lib/llm');
 
 module.exports = async (req, res) => {
   try {
@@ -14,7 +15,7 @@ module.exports = async (req, res) => {
       const v = await getVersion(store);
       if (since === v) return res.status(200).json({ unchanged: true, version: v, mode: store.mode });
       const data = await readAll(store);
-      return res.status(200).json({ ...data, mode: store.mode, ai: !!process.env.ANTHROPIC_API_KEY });
+      return res.status(200).json({ ...data, mode: store.mode, ai: llm.available().length > 0, aiProviders: llm.available() });
     }
     if (req.method === 'POST') {
       const b = body(req);
