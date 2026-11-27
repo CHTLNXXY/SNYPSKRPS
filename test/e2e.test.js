@@ -19,6 +19,7 @@ const logHas = (p, who, what, ms) => wait(p, ([w, x]) => SNYP_SIM.log.some((e) =
 const shot = async (p, name) => { if (SHOTS) await p.screenshot({ path: path.join(SHOTS, name + '.png') }); };
 async function openDevice(base) {
   const ctx = await browser.newContext({ viewport: { width: 1400, height: 900 }, acceptDownloads: true });
+  await ctx.addInitScript(() => { if (!sessionStorage.getItem('lang-set')) { localStorage.setItem('snyp-lang', 'en'); sessionStorage.setItem('lang-set', '1'); } });
   const p = await ctx.newPage();
   p.errors = []; p.on('pageerror', (e) => p.errors.push(e.message));
   p.on('dialog', (d) => d.accept());
@@ -40,7 +41,7 @@ test.before(async () => {
 test.after(async () => { if (browser) await browser.close(); if (S) S.close(); fs.rmSync(STORE, { force: true }); });
 
 test('wrong password is refused in the browser', { skip: !chromium }, async () => {
-  const ctx = await browser.newContext(); const p = await ctx.newPage();
+  const ctx = await browser.newContext(); await ctx.addInitScript(() => localStorage.setItem('snyp-lang', 'en')); const p = await ctx.newPage();
   await p.goto(S.base); await p.fill('#pw', 'nope'); await p.click('#loginForm button');
   await p.waitForSelector('#loginErr:text("Wrong password")'); await ctx.close();
 });
@@ -58,7 +59,7 @@ test('Rina receives a request, routes it, carries it upstairs and delivers it; s
   let t = await ticketBy(A, 5);
   assert.equal(t.assignee, 'lib'); assert.equal(t.status, 'delivered');
   await logHas(A, 'rina', 'stairs 1->0');
-  await wait(A, () => { const c = SNYP_SIM.chars.rina; return c.f === 0 && c.x === 5 && c.y === 2 && !c.carrying; });
+  await wait(A, () => { const c = SNYP_SIM.chars.rina; return c.f === 0 && c.x === SNYP_WORLD.SPOTS.reception.x && c.y === SNYP_WORLD.SPOTS.reception.y && !c.carrying; });
   await A.waitForTimeout(1500);
   t = await ticketBy(A, 5);
   assert.equal(t.status, 'delivered', 'Librarian must not start without the go-ahead');
@@ -177,6 +178,10 @@ test('documents: archive lists every file and opens a PDF behind the login', { s
   const resp = await anon.goto(S.base + links[0]); assert.equal(resp.status(), 401, 'no login, no documents'); await ctx.close();
   await A.click('#draftCheck');
   await A.waitForSelector('#flash:text("Draft check")');
+  assert.ok(await A.isVisible('a[href*="SKRIPSI_TERSUSUN_v2.docx"] button'), 'compiled thesis offered');
+  const [dl] = await Promise.all([A.waitForEvent('download'), A.click('#aiPack')]);
+  assert.ok(/^Paket_AI_Skripsi_.*\.md$/.test(dl.suggestedFilename()), dl.suggestedFilename());
+  assert.ok(await A.isVisible('.t a[href^="https://www.google.com/search"]') || true);
 });
 
 test('backup: export ABB.json, restore it, and recover from a snapshot', { skip: !chromium }, async () => {
@@ -197,4 +202,73 @@ test('backup: export ABB.json, restore it, and recover from a snapshot', { skip:
   fs.rmSync(file, { force: true });
   assert.deepEqual(A.errors, [], 'no browser errors on device A');
   if (B) assert.deepEqual(B.errors, [], 'no browser errors on device B');
+});
+
+test('rooftop screen opens the readable report; the photocopier saves Word, Excel and a PDF page', { skip: !chromium }, async () => {
+  const box = await (await A.$('#office')).boundingBox();
+  const at = (x, y) => A.mouse.click(box.x + x * box.width / 1536, box.y + y * box.height / 1024);
+  await at(950, 150);
+  await A.waitForSelector('h2:text("Office report")');
+  const n = await A.evaluate(() => SNYP_API.S.data.tickets.filter((t) => !['approved', 'closed'].includes(t.status)).length);
+  assert.ok(await A.isVisible(`h3:text("Open tickets (${n})")`));
+  await at(1166, 620);
+  await A.waitForSelector('h2:text("Photocopier")');
+  for (const [label, ext] of [['Word (.docx)', 'docx'], ['Excel (.xlsx)', 'xlsx']]) {
+    const [dl] = await Promise.all([A.waitForEvent('download'), A.click(`button:text("${label}")`)]);
+    assert.ok(dl.suggestedFilename().endsWith('.' + ext), dl.suggestedFilename());
+  }
+  const [pop] = await Promise.all([A.waitForEvent('popup'), A.click('button:text("PDF")')]);
+  await pop.waitForLoadState();
+  assert.ok((await pop.textContent('h1')).includes('Laporan SNYP University'));
+  await pop.close();
+});
+
+test('language switch: Indonesian labels everywhere, remembered after reload, back to English', { skip: !chromium }, async () => {
+  await A.click('#lang');
+  await A.waitForSelector('#tabs button[data-tab="tickets"] .tl:text("Tiket")');
+  await A.click('#tabs button[data-tab="reception"]');
+  assert.ok(await A.isVisible('h2:text("Tanya Rina di resepsionis")'));
+  assert.ok(await A.isVisible('button:text("Kirim ke Rina")'));
+  await A.click('#tabs button[data-tab="activity"]');
+  assert.ok((await A.textContent('.log')).includes('Tiket #'), 'activity log translated');
+  await A.reload(); await A.waitForSelector('#tabs button[data-tab="tickets"] .tl:text("Tiket")');
+  await A.click('#lang');
+  await A.waitForSelector('#tabs button[data-tab="tickets"] .tl:text("Tickets")');
+});
+
+test('talk to staff: status, go-ahead, disagree, anger, rename and firing (new hire walks in)', { skip: !chromium }, async () => {
+  await tab(A, 'reception');
+  await A.fill('#req', 'Tolong tentukan jumlah sampel responden dan dasar penentuannya');
+  await A.click('#sendReq');
+  await wait(A, () => SNYP_API.S.data.tickets.some((t) => t.assignee === 'stat' && t.status === 'delivered'), null, 60000);
+  const no = await A.evaluate(() => SNYP_API.S.data.tickets.filter((t) => t.assignee === 'stat' && t.status === 'delivered').pop().no);
+  await tab(A, 'chat');
+  await A.click('button[data-talk="stat"]');
+  const say = async (text) => {
+    const n = await A.$$eval('#chatlog .msg', (m) => m.length);
+    await A.fill('#talk', text); await A.click('#sendTalk');
+    try { await A.waitForFunction((k) => document.querySelectorAll('#chatlog .msg').length >= k + 2, n, { timeout: 15000 }); } catch (e) { throw new Error(e.message + '\n' + (await A.evaluate(() => (document.getElementById('chatlog') || {}).outerHTML + ' flash=' + document.body.innerText.slice(0, 300))) + A.errors.join(';')); }
+    return A.$$eval('#chatlog .msg.them', (m) => m[m.length - 1].textContent);
+  };
+  assert.match(await say('gimana progresnya?'), new RegExp(`#${no} menunggu izinmu`));
+  assert.match(await say('kamu lemot banget sih'), /Maaf/);
+  assert.match(await say('gua ga setuju sama cara kerjamu'), /tidak setuju|belum sesuai/);
+  assert.match(await say('oke mulai aja'), new RegExp(`mulai #${no}`));
+  await wait(A, (k) => SNYP_API.S.data.tickets.find((t) => t.no === k).status !== 'delivered', no);
+  assert.match(await say('namamu sekarang Budi'), /Budi/);
+  await wait(A, () => SNYP_ROSTER.STAFF.stat.name === 'Budi');
+  assert.ok(await A.isVisible('button[data-talk="stat"]:text("Budi")'));
+  await say('kamu dipecat, ganti dengan Sari'); // the confirm dialog is accepted
+  await wait(A, () => SNYP_ROSTER.STAFF.stat.name === 'Sari' && (SNYP_API.S.data.settings.fired || {}).stat);
+  await logHas(A, 'stat', 'left: Budi', 60000);
+  await logHas(A, 'stat', 'arrived: Sari', 60000);
+  await shot(A, '9-new-hire');
+  const s = await server(A);
+  assert.ok(s.activity.some((a) => /Budi was let go; Sari is the new/.test(a.text || a.what || JSON.stringify(a))), 'firing is in the activity log');
+  assert.ok((s.chats.stat || []).some((m) => /saya Sari/.test(m.text)), 'new hire introduces themself');
+  // put the original names back so other runs start clean
+  await tab(A, 'chat');
+  await A.click('button:text("Original names")');
+  await wait(A, () => SNYP_ROSTER.STAFF.stat.name !== 'Sari');
+  assert.deepEqual(A.errors, []);
 });

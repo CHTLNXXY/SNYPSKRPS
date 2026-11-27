@@ -86,15 +86,23 @@ test('two devices changing different tickets at the same time both persist', asy
 });
 
 test('draft check reads the real draft and does not duplicate existing tickets', async () => {
-  let r = await A.call('POST', '/api/draftcheck', {});
+  const DRAFT = '01_Thesis_Draft/draft skripsi (Pengaruh Trust in AI dan AI Reliance terhadap Minat Investasi Syariah pada Pengguna Artificial Intelligence).docx';
+  let r = await A.call('POST', '/api/draftcheck', { path: DRAFT });
   assert.equal(r.status, 200, JSON.stringify(r.body));
   assert.equal(r.body.revision, '951804354c86ceb4c26a0e8f994bd649');
   assert.equal(r.body.unchanged, true);
   const keys = r.body.findings.map((f) => f.key);
   assert.ok(keys.includes('refs:incomplete')); assert.ok(keys.some((k) => k.startsWith('ph:[jumlah sampel')));
   assert.deepEqual(r.body.created.map((t) => t.title.slice(0, 12)), ['Front matter'], 'only the finding the old app never ticketed');
-  r = await A.call('POST', '/api/draftcheck', {});
+  r = await A.call('POST', '/api/draftcheck', { path: DRAFT });
   assert.equal(r.body.created.length, 0, 'second run creates nothing');
+  // With no path the office checks the compiled thesis; the same placeholders must not become new tickets.
+  r = await A.call('POST', '/api/draftcheck', {});
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.ok(r.body.findings.length > 0);
+  const st = (await A.call('GET', '/api/state')).body;
+  assert.match(st.state.lastCheckedFile, /SKRIPSI_TERSUSUN_v2\.docx/);
+  assert.ok(!r.body.created.some((t) => /jumlah sampel|refer/i.test(t.title)), JSON.stringify(r.body.created.map((t) => t.title)));
 });
 
 test('meeting workflow: call, gather, discuss, minutes, action to ticket, end', async () => {
@@ -144,6 +152,42 @@ test('document archive lists every file and serves exact bytes; blocks path tric
   const got = Buffer.from(await r.arrayBuffer());
   assert.ok(got.equals(fs.readFileSync(path.join(process.env.SNYP_ARCHIVE_DIR, p))));
   assert.equal((await A.call('GET', '/api/docs?path=' + encodeURIComponent('../SNYP_University/docs/ARCHITECTURE.md'))).status, 400);
+});
+
+test('photocopier exports the report, a ticket and a meeting as Word, Excel and a printable PDF page', async () => {
+  const { unzipSync, strFromU8 } = require('fflate');
+  const B = S.client();
+  assert.equal((await B.call('GET', '/api/export?format=docx')).status, 401, 'login required');
+  const st = (await A.call('GET', '/api/state')).body;
+  const t = st.tickets[0];
+  const get = async (q) => { const r = await A.call('GET', '/api/export?' + q, null, true); return { r, buf: new Uint8Array(await r.arrayBuffer()) }; };
+  let { r, buf } = await get('kind=report&format=docx');
+  assert.equal(r.status, 200); assert.match(r.headers.get('content-disposition'), /Laporan_SNYP_.*\.docx/);
+  let z = unzipSync(buf); const doc = strFromU8(z['word/document.xml']);
+  assert.ok(doc.includes('Laporan SNYP University') && doc.includes('#' + t.no) && doc.includes('<w:tbl>'));
+  ({ r, buf } = await get('kind=report&format=xlsx'));
+  z = unzipSync(buf); assert.ok(z['xl/workbook.xml'] && strFromU8(z['xl/workbook.xml']).includes('Semua tiket'));
+  assert.ok(Object.keys(z).filter((k) => k.startsWith('xl/worksheets/')).length >= 3);
+  ({ r, buf } = await get(`kind=ticket&id=${t.id}&format=docx`));
+  assert.ok(strFromU8(unzipSync(buf)['word/document.xml']).includes(`Tiket #${t.no}`));
+  ({ r, buf } = await get('kind=report&format=pdf'));
+  const html = strFromU8(buf); assert.match(r.headers.get('content-type'), /text\/html/); assert.ok(html.includes('print()') && html.includes('Semua tiket'));
+  const ms = st.meetings; if (ms.length) { ({ r } = await get(`kind=meeting&id=${ms[ms.length - 1].id}&format=xlsx`)); assert.equal(r.status, 200); }
+  assert.equal((await A.call('GET', '/api/export?kind=ticket&id=nope&format=docx')).status, 404);
+});
+
+test('AI package: one Markdown file with instructions, open tickets and the full compiled thesis', async () => {
+  const r = await A.call('GET', '/api/export?kind=aipack', null, true);
+  assert.equal(r.status, 200);
+  assert.match(r.headers.get('content-disposition'), /Paket_AI_Skripsi_.*\.md/);
+  const md = await r.text();
+  assert.ok(md.includes('## Instruksi untuk AI') && md.includes('Jangan mengarang angka'));
+  assert.ok(md.includes('Tiket terbuka:'));
+  for (const hd of ['# BAB I PENDAHULUAN', '## 1.1 Latar Belakang', '# BAB III METODE PENELITIAN', '# BAB IV HASIL PENELITIAN DAN PEMBAHASAN', '# BAB V KESIMPULAN DAN SARAN', '# DAFTAR PUSTAKA']) assert.ok(md.includes(hd), hd);
+  assert.ok(md.includes('SKRIPSI_TERSUSUN_v2.docx'), 'uses the compiled thesis');
+  const archive = require('../lib/archive');
+  assert.equal(archive.currentThesis([{ path: '01_Thesis_Draft/draft skripsi.docx' }, { path: '01_Thesis_Draft/SKRIPSI_TERSUSUN_v2.docx' }, { path: '01_Thesis_Draft/SKRIPSI_TERSUSUN_v10.docx' }]), '01_Thesis_Draft/SKRIPSI_TERSUSUN_v10.docx');
+  assert.equal(archive.currentThesis([{ path: '01_Thesis_Draft/a.docx' }, { path: '01_Thesis_Draft/b.docx' }]), '01_Thesis_Draft/b.docx');
 });
 
 test('login brute force is throttled', async () => {
