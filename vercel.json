@@ -21,6 +21,10 @@
     },
     "api/backup.js": {
       "maxDuration": 60
+    },
+    "api/export.js": {
+      "maxDuration": 60,
+      "includeFiles": "thesis-archive/**"
     }
   },
   "headers": [
