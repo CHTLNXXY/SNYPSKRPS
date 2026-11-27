@@ -1,0 +1,15 @@
+SNYP University x Kantor Skripsi: files to upload to GitHub (CHTLNXXY/SNYPSKRPS)
+
+1. Unzip this file.
+2. On GitHub open the repo, then Add file > Upload files.
+3. Drag the folders public, lib, api, test plus dev-server.js into the upload box.
+   GitHub keeps the folder paths and overwrites the files with the same name.
+   Files that are not in this zip stay as they are.
+4. Commit. Vercel redeploys automatically in about 1 minute.
+
+What changes:
+- Staff: Trisha (receptionist), Nadia, Fiony, Dr. Stone, Catlin, Ujang Anduk, Ust. Duy, Jayenab (director).
+- Chibi characters that really walk (legs, arms, bounce), sit, type, blink and move their mouth when talking.
+- Clicking or talking with a staff member pops up their avatar card.
+- Campus photo behind the right panel; rooftop screen still shows the progress report.
+- Names saved earlier in Settings > Names still win. Press "Nama awal" there to use the new names.

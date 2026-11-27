@@ -1,14 +1,16 @@
 // Shared by the browser and the server. Staff, ticket states and who may move a ticket between states.
 (function (root) {
   const STAFF = {
-    rina:     { name: 'Rina',     role: 'Receptionist',   floor: 1, color: '#e0789b', skills: ['intake', 'routing'] },
-    nadia:    { name: 'Nadia',    role: 'Secretary',      floor: 2, color: '#9b7be0', skills: ['minutes', 'format', 'admin', 'jadwal', 'surat'] },
-    stat:     { name: 'Statistician', role: 'Statistics Expert', floor: 2, color: '#4fa3e0', skills: ['sampel', 'sample', 'statistik', 'pls', 'sem', 'spss', 'regresi', 'uji', 'data', 'responden', 'kuesioner', 'olah'] },
-    metod:    { name: 'Methodologist', role: 'Methodology Expert', floor: 2, color: '#53b88a', skills: ['metode', 'metodologi', 'variabel', 'indikator', 'skala', 'definisi operasional', 'hipotesis', 'model', 'teori', 'bab iii', 'kerangka'] },
-    lib:      { name: 'Librarian', role: 'Reference Librarian', floor: 2, color: '#e0a64f', skills: ['referensi', 'reference', 'pustaka', 'jurnal', 'apa', 'sitasi', 'citation', 'doi', 'literatur'] },
-    director: { name: 'Director', role: 'Director / Supervisor', floor: 2, color: '#d9534f', skills: ['supervise'] },
+    rina:     { name: 'Trisha',   role: 'Receptionist',   floor: 1, color: '#2a3fa0', skills: ['intake', 'routing'] },
+    nadia:    { name: 'Nadia',    role: 'Secretary',      floor: 2, color: '#9b7be0', skills: ['minutes', 'notulen', 'format', 'admin', 'jadwal', 'surat', 'template', 'margin'] },
+    stat:     { name: 'Fiony',    role: 'Statistician',   floor: 2, color: '#4fa3e0', skills: ['sampel', 'sample', 'statistik', 'pls', 'sem', 'spss', 'smartpls', 'regresi', 'uji', 'data', 'responden', 'kuesioner', 'olah', 'validitas', 'reliabilitas'] },
+    metod:    { name: 'Dr. Stone', role: 'Methodologist', floor: 2, color: '#53b88a', skills: ['metode', 'metodologi', 'variabel', 'indikator', 'skala', 'definisi operasional', 'hipotesis', 'model', 'teori', 'bab iii', 'kerangka'] },
+    lib:      { name: 'Catlin',   role: 'Librarian',      floor: 2, color: '#e0a64f', skills: ['referensi', 'reference', 'pustaka', 'jurnal', 'apa', 'sitasi', 'citation', 'doi', 'literatur', 'mendeley'] },
+    editor:   { name: 'Ujang Anduk', role: 'Academic Editor', floor: 2, color: '#7f8aa8', skills: ['bahasa', 'tata bahasa', 'ejaan', 'eyd', 'puebi', 'typo', 'kalimat', 'parafrase', 'abstrak', 'proofread', 'edit', 'paragraf'] },
+    syariah:  { name: 'Ust. Duy', role: 'Islamic Finance Expert', floor: 2, color: '#2f7a5a', skills: ['syariah', 'halal', 'fatwa', 'dsn', 'mui', 'akad', 'riba', 'gharar', 'maysir', 'sukuk', 'reksa dana', 'saham syariah', 'islam', 'maqashid', 'zakat'] },
+    director: { name: 'Jayenab',  role: 'Director / Supervisor', floor: 2, color: '#d9534f', skills: ['supervise'] },
   };
-  const WORKERS = ['nadia', 'stat', 'metod', 'lib'];
+  const WORKERS = ['nadia', 'stat', 'metod', 'lib', 'editor', 'syariah'];
 
   const STATUS = {
     received:   'At reception',

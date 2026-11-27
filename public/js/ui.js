@@ -3,7 +3,7 @@
   const API = window.SNYP_API, R = window.SNYP_ROSTER, SIM = window.SNYP_SIM, RENDER = window.SNYP_RENDER, TALK = window.SNYP_TALK;
   const $ = (s) => document.querySelector(s);
   const I18N = window.SNYP_I18N, L = I18N.L;
-  const ROLE_ID = { rina: 'Resepsionis', nadia: 'Sekretaris', stat: 'Ahli Statistik', metod: 'Ahli Metodologi', lib: 'Pustakawan Referensi', director: 'Direktur / Pengawas' };
+  const ROLE_ID = { rina: 'Resepsionis', nadia: 'Sekretaris', stat: 'Ahli Statistik', metod: 'Ahli Metodologi', lib: 'Pustakawan', editor: 'Editor Akademik', syariah: 'Ahli Keuangan Syariah', director: 'Direktur / Pengawas' };
   const role = (id, en) => L(en, ROLE_ID[id] || en);
   // Activity log lines come from the server in English; show them in Indonesian when chosen.
   const LOG_ID = [
@@ -50,12 +50,12 @@
   function reception() {
     const d = data(), chat = (d.chats.rina || []).slice(-12);
     return [
-      h('h2', {}, L('Ask Rina at reception', 'Tanya Rina di resepsionis')),
-      h('p', { class: 'small' }, L('Describe what you need. Rina reads it, opens a ticket, decides who is responsible and walks it to their desk. Nobody starts until you give the go-ahead.', 'Tulis apa yang kamu butuhkan. Rina membacanya, membuat tiket, menentukan siapa yang bertanggung jawab, lalu mengantarnya ke meja staf. Tidak ada yang mulai bekerja sebelum kamu memberi izin.')),
+      h('h2', {}, L('Ask Trisha at reception', 'Tanya Trisha di resepsionis')),
+      h('p', { class: 'small' }, L('Describe what you need. Trisha reads it, opens a ticket, decides who is responsible and walks it to their desk. Nobody starts until you give the go-ahead.', 'Tulis apa yang kamu butuhkan. Trisha membacanya, membuat tiket, menentukan siapa yang bertanggung jawab, lalu mengantarnya ke meja staf. Tidak ada yang mulai bekerja sebelum kamu memberi izin.')),
       h('textarea', { keep: 'req', placeholder: 'e.g. Tolong tentukan jumlah sampel dan dasar penentuannya untuk 3.2.2' }),
       h('label', { class: 'row small' }, h('input', { type: 'checkbox', id: 'reqNight', style: 'width:auto', checked: !!drafts.night, on: { change: (e) => { drafts.night = e.target.checked; } } }), L('Night Shift ticket (worked only while Night Shift is on)', 'Tiket Shift Malam (hanya dikerjakan saat Shift Malam aktif)')),
       h('div', { class: 'row' }, h('select', { id: 'reqPrio', style: 'width:auto' }, h('option', { value: 'normal' }, L('Normal priority', 'Prioritas normal')), h('option', { value: 'high' }, L('High priority', 'Prioritas tinggi')), h('option', { value: 'low' }, L('Low priority', 'Prioritas rendah'))),
-        h('button', { class: 'primary', id: 'sendReq', on: { click: sendRequest } }, L('Send to Rina', 'Kirim ke Rina'))),
+        h('button', { class: 'primary', id: 'sendReq', on: { click: sendRequest } }, L('Send to Trisha', 'Kirim ke Trisha'))),
       chat.length ? h('h3', {}, L('Recent requests', 'Permintaan terakhir')) : null,
       ...chat.reverse().map((c) => h('div', { class: 'small' }, `${when(c.at)} · ${name(c.who)}: ${c.text.slice(0, 160)}`)),
     ];
@@ -68,7 +68,7 @@
       const first = text.split('\n')[0];
       await API.op('ticket.create', 'rina', { title: first.length > 120 ? first.slice(0, 117) + '…' : first, detail: text, priority, night, source: 'Request' });
       drafts.req = ''; drafts.night = false;
-    }, L('Sent. Watch Rina read it and carry it upstairs.', 'Terkirim. Lihat Rina membacanya dan membawanya ke atas.'));
+    }, L('Sent. Watch Trisha read it and carry it upstairs.', 'Terkirim. Lihat Trisha membacanya dan membawanya ke atas.'));
   }
 
   function ticketCard(t) {
@@ -124,17 +124,17 @@
       if (m.agenda) out.push(h('div', { class: 'small' }, m.agenda));
       out.push(...m.contributions.map((c) => h('div', { class: 'note' }, h('strong', {}, name(c.who) + ': '), c.text)));
       if (m.status === 'in_session') {
-        out.push(h('textarea', { keep: 'msay', placeholder: L('Your contribution. Lines starting with "Action:" become action items (add @stat, @metod, @lib or @nadia).', 'Pendapatmu. Baris yang diawali "Action:" menjadi action item (tambahkan @stat, @metod, @lib atau @nadia).') }),
+        out.push(h('textarea', { keep: 'msay', placeholder: L('Your contribution. Lines starting with "Action:" become action items (add @stat, @metod, @lib, @editor, @syariah or @nadia).', 'Pendapatmu. Baris yang diawali "Action:" menjadi action item (tambahkan @stat, @metod, @lib, @editor, @syariah atau @nadia).') }),
           h('div', { class: 'row' }, h('button', { on: { click: () => { const t = (drafts.msay || '').trim(); if (t) run(async () => { await API.op('meeting.contribute', 'owner', { id: m.id, text: t }); drafts.msay = ''; }); } } }, L('Say', 'Kirim')),
             h('button', { class: 'primary', id: 'wrapUp', on: { click: () => op('meeting.transition', { id: m.id, to: 'minutes' }) } }, L('Wrap up: minutes', 'Selesai: buat notulen'))));
       }
       if (m.minutes) {
         out.push(h('h3', {}, L('Minutes (Nadia)', 'Notulen (Nadia)')), h('pre', {}, m.minutes), h('h3', {}, L('Action items', 'Action item')));
         if (!m.actions.length) out.push(h('div', { class: 'small' }, L('No action items.', 'Tidak ada action item.')));
-        m.actions.forEach((a, i) => out.push(h('div', { class: 'row' }, h('span', { style: 'flex:1' }, `${a.text} → ${a.assignee ? name(a.assignee) : 'Rina decides'}`),
+        m.actions.forEach((a, i) => out.push(h('div', { class: 'row' }, h('span', { style: 'flex:1' }, `${a.text} → ${a.assignee ? name(a.assignee) : 'Trisha decides'}`),
           a.ticket ? h('span', { class: 'tag' }, 'ticket ' + a.ticket) : h('button', { 'data-action': i, on: { click: () => op('meeting.actionToTicket', { id: m.id, index: i }, L('Ticket created at reception.', 'Tiket dibuat di resepsionis.')) } }, L('Make ticket', 'Jadikan tiket')))));
         out.push(h('details', {}, h('summary', { class: 'small' }, L('Edit action items', 'Ubah action item')), h('textarea', { keep: 'mact', placeholder: L('One per line: text @stat', 'Satu per baris: teks @stat') }),
-          h('button', { on: { click: () => { const actions = (drafts.mact || '').split('\n').map((l) => l.trim()).filter(Boolean).map((l) => { const at = l.match(/@(nadia|stat|metod|lib)\b/); return { text: l.replace(/@\w+/, '').trim(), assignee: at ? at[1] : R.routeRequest(l).assignee }; }); op('meeting.minutes', { id: m.id, minutes: m.minutes, actions: [...m.actions, ...actions] }, L('Action items added.', 'Action item ditambahkan.')); drafts.mact = ''; } } }, L('Add items', 'Tambah'))));
+          h('button', { on: { click: () => { const actions = (drafts.mact || '').split('\n').map((l) => l.trim()).filter(Boolean).map((l) => { const at = l.match(/@(nadia|stat|metod|lib|editor|syariah)\b/); return { text: l.replace(/@\w+/, '').trim(), assignee: at ? at[1] : R.routeRequest(l).assignee }; }); op('meeting.minutes', { id: m.id, minutes: m.minutes, actions: [...m.actions, ...actions] }, L('Action items added.', 'Action item ditambahkan.')); drafts.mact = ''; } } }, L('Add items', 'Tambah'))));
       }
       out.push(h('button', { class: m.minutes ? 'primary' : 'bad', id: 'endMeeting', on: { click: () => { if (m.minutes || confirm(L('End the meeting before minutes are written?', 'Akhiri rapat sebelum notulen ditulis?'))) op('meeting.transition', { id: m.id, to: 'ended' }, L('Meeting ended.', 'Rapat selesai.')); } } }, L('End meeting', 'Akhiri rapat')));
     }
@@ -311,7 +311,7 @@ Tolong kerjakan tugas ini dalam Bahasa Indonesia akademik. Tulis hasil akhir yan
     return [h('h2', {}, L('Settings', 'Pengaturan')),
       h('label', { class: 'row' }, h('input', { type: 'checkbox', id: 'nightToggle', style: 'width:auto', checked: !!s.nightShift, on: { change: (e) => op('settings.set', { key: 'nightShift', value: e.target.checked }) } }), L('Night Shift on (office goes dark; night tickets get worked)', 'Shift Malam aktif (kantor gelap; tiket malam dikerjakan)')),
       h('div', { class: 'small' }, L('Storage: ', 'Penyimpanan: ') + (API.S.mode === 'server' ? L('Upstash Redis on the server, shared by all your devices.', 'Upstash Redis di server, dipakai bersama semua perangkatmu.') : L('LOCAL TEST MODE: a file on this computer only. Deploy to Vercel with Upstash for real storage.', 'MODE TES LOKAL: file di komputer ini saja. Deploy ke Vercel dengan Upstash untuk penyimpanan sungguhan.'))),
-      h('div', { class: 'small' }, 'AI: ' + (API.S.ai ? L('on (ANTHROPIC_API_KEY set). Staff draft results and meeting views with Claude.', 'aktif (ANTHROPIC_API_KEY terpasang). Staf menyusun hasil dan pendapat rapat dengan Claude.') : L('off. Rina routes by keywords; staff wait for you to hand them results.', 'mati. Rina membagi tiket berdasarkan kata kunci; staf menunggu kamu menyerahkan hasil.'))),
+      h('div', { class: 'small' }, 'AI: ' + (API.S.ai ? L('on (ANTHROPIC_API_KEY set). Staff draft results and meeting views with Claude.', 'aktif (ANTHROPIC_API_KEY terpasang). Staf menyusun hasil dan pendapat rapat dengan Claude.') : L('off. Trisha routes by keywords; staff wait for you to hand them results.', 'mati. Trisha membagi tiket berdasarkan kata kunci; staf menunggu kamu menyerahkan hasil.'))),
       h('div', { class: 'small' }, L('This device: ', 'Perangkat ini: ') + (API.S.leader ? L('drives the office (leader).', 'menggerakkan kantor (leader).') : L('watching. Another open device is driving the office.', 'menonton. Perangkat lain yang sedang menggerakkan kantor.'))),
       h('button', { on: { click: async () => { await API.logout(); location.reload(); } } }, L('Log out', 'Keluar'))];
   }
@@ -339,17 +339,33 @@ Tolong kerjakan tugas ini dalam Bahasa Indonesia akademik. Tulis hasil akhir yan
 
   document.addEventListener('click', (e) => { const b = e.target.closest('#tabs button'); if (b) { tab = b.dataset.tab; flash = ''; try { localStorage.setItem('snyp-tab', tab); } catch (err) { /* ignore */ } if (tab === 'docs' && !docs) loadDocs(); render(); } });
 
+  // Avatar card that pops up when you click someone or when they talk to you.
+  let cardTimer = null;
+  function showCard(id, line) {
+    const box = $('#who'), c = SIM.chars[id]; if (!box || !c) return;
+    const st0 = R.STAFF[id] || { name: L('You', 'Kamu'), role: L('Student', 'Mahasiswa') }; const st = { name: st0.name, role: role(id, st0.role) };
+    const mine = data().tickets.filter((t) => t.assignee === id && !['closed', 'approved'].includes(t.status));
+    const say = line || (c.bubble && c.bubble.text) || '';
+    box.replaceChildren(
+      R.STAFF[id] ? h('img', { class: 'whofig', src: 'img/full/' + id + '.webp', alt: '' }) : h('span'),
+      h('div', { class: 'whotxt' },
+        h('strong', {}, st.name), h('div', { class: 'small' }, st.role),
+        h('div', { class: 'small' }, c.jobName ? L('Doing: ', 'Sedang: ') + c.jobName : L('At their spot', 'Di tempatnya')),
+        ...mine.slice(0, 3).map((t) => h('div', { class: 'small' }, `#${t.no} ${stat(t.status)}`)),
+        say ? h('div', { class: 'whosay' }, say.length > 220 ? say.slice(0, 219) + '…' : say) : h('span'),
+        h('button', { class: 'whox', 'aria-label': L('Close', 'Tutup'), on: { click: (e) => { e.stopPropagation(); box.hidden = true; } } }, '×')));
+    box.hidden = false;
+    clearTimeout(cardTimer); cardTimer = setTimeout(() => { box.hidden = true; }, 12000);
+  }
+  if (SIM.speak) { const sp = SIM.speak; SIM.speak = (id, text, mood) => { sp(id, text, mood); showCard(id, text); }; }
+
   // Character inspector.
   function inspect(evt) {
     if (RENDER.onScreen && RENDER.onScreen(evt)) { tab = 'report'; flash = ''; render(); $('#who').hidden = true; return; }
     if (RENDER.onPrinter && RENDER.onPrinter(evt)) { copyKind = 'report'; copyId = ''; tab = 'copier'; flash = ''; render(); $('#who').hidden = true; return; }
     const c = RENDER.hit(evt), box = $('#who');
     if (!c) { box.hidden = true; return; }
-    const st0 = R.STAFF[c.id] || { name: L('You', 'Kamu'), role: L('Student', 'Mahasiswa') }; const st = { name: st0.name, role: role(c.id, st0.role) };
-    const mine = data().tickets.filter((t) => t.assignee === c.id && !['closed', 'approved'].includes(t.status));
-    box.replaceChildren(h('strong', {}, `${st.name} · ${st.role}`), h('div', { class: 'small' }, c.jobName ? L('Doing: ', 'Sedang: ') + c.jobName : L('At their spot', 'Di tempatnya')),
-      ...mine.map((t) => h('div', { class: 'small' }, `#${t.no} ${stat(t.status)}`)));
-    box.hidden = false;
+    showCard(c.id);
     if (R.STAFF[c.id]) { // clicking a staff member opens the chat with them
       talkTo = c.id; try { localStorage.setItem('snyp-talk', c.id); } catch (e) { /* private mode */ }
       tab = 'chat'; flash = ''; render();

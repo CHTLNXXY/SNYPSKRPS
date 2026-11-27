@@ -25,11 +25,14 @@
     desk_stat: [1, 1042, 752], front_stat: [1, 1042, 714],
     desk_metod: [1, 1112, 790], front_metod: [1, 1140, 742],
     office_s: [1, 1190, 790], desk_lib: [1, 1255, 858], front_lib: [1, 1222, 820],
+    desk_editor: [1, 1232, 690], front_editor: [1, 1222, 722],
+    desk_syariah: [1, 1325, 792], front_syariah: [1, 1300, 760],
     roof_exit: [1, 1462, 712],
     // Floor 3 — rooftop
     stairs2: [2, 1112, 342], roof_mid: [2, 965, 345], roof_back: [2, 870, 262], roof_left: [2, 655, 330],
     seat_owner: [2, 805, 252], seat_director: [2, 735, 338], seat_rina: [2, 862, 332],
     seat_stat: [2, 690, 298], seat_metod: [2, 925, 296], seat_lib: [2, 775, 368], seat_nadia: [2, 1035, 366],
+    seat_editor: [2, 985, 300], seat_syariah: [2, 628, 352],
   };
   const EDGES = [
     ['door', 'counter'], ['counter', 'lobby_mid'], ['lobby_mid', 'lobby_right'], ['counter', 'lobby_right'],
@@ -41,8 +44,10 @@
     ['office_a', 'front_stat'], ['office_b', 'front_stat'], ['front_stat', 'desk_stat'],
     ['office_b', 'front_metod'], ['office_c', 'front_metod'], ['front_metod', 'desk_metod'],
     ['office_c', 'office_s'], ['office_s', 'front_lib'], ['front_lib', 'desk_lib'], ['front_metod', 'office_s'],
+    ['office_c', 'front_editor'], ['front_editor', 'desk_editor'], ['front_director', 'front_syariah'], ['office_s', 'front_syariah'], ['front_syariah', 'desk_syariah'],
     ['stairs2', 'roof_mid'], ['roof_mid', 'roof_back'], ['roof_back', 'seat_owner'], ['roof_back', 'roof_left'],
     ['roof_mid', 'seat_rina'], ['roof_mid', 'seat_metod'], ['roof_mid', 'seat_nadia'], ['roof_mid', 'seat_lib'],
+    ['roof_mid', 'seat_editor'], ['roof_back', 'seat_editor'], ['roof_left', 'seat_syariah'],
     ['roof_left', 'seat_director'], ['roof_left', 'seat_stat'], ['roof_left', 'seat_lib'], ['seat_lib', 'seat_rina'],
   ];
   // Floor links (staircases): walk to one end, fade, appear at the other.
@@ -50,7 +55,7 @@
 
   const SPOTS = {};
   for (const [k, [f, x, y]] of Object.entries(N)) SPOTS[k] = { f, x, y, key: k };
-  const HOME = { rina: 'reception', nadia: 'desk_nadia', stat: 'desk_stat', metod: 'desk_metod', lib: 'desk_lib', director: 'desk_director' };
+  const HOME = { rina: 'reception', nadia: 'desk_nadia', stat: 'desk_stat', metod: 'desk_metod', lib: 'desk_lib', editor: 'desk_editor', syariah: 'desk_syariah', director: 'desk_director' };
 
   const adj = {};
   const dist = (a, b) => Math.hypot(SPOTS[a].x - SPOTS[b].x, SPOTS[a].y - SPOTS[b].y);
@@ -85,7 +90,7 @@
   }
 
   // Desk paper piles (ticket markers) and light sources, in artwork pixels.
-  const DESK_PAPERS = { nadia: [925, 712], stat: [1080, 745], metod: [1150, 785], lib: [1300, 835], director: [1360, 668] };
+  const DESK_PAPERS = { nadia: [925, 712], stat: [1080, 745], metod: [1150, 785], lib: [1300, 835], editor: [1262, 676], syariah: [1352, 778], director: [1360, 668] };
   const LIGHTS = [[305, 562], [600, 607], [858, 662], [1505, 596], [722, 60], [1170, 128], [805, 298]];
 
   window.SNYP_WORLD = { IMG, UNIT, FLOORS, SPOTS, HOME, route, nearest, DESK_PAPERS, LIGHTS };

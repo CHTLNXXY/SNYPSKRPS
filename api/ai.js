@@ -45,7 +45,7 @@ module.exports = async (req, res) => {
 
     if (b.task === 'route') {
       const out = json(await ask(
-        `You are Rina. Turn the student's request into one ticket. Reply with JSON only: {"title": short Indonesian title, "detail": what to do and what to hand back, "assignee": one of ${JSON.stringify(R.WORKERS)}, "priority": "high"|"normal"|"low", "section": thesis section number or "", "reason": one sentence why this staff member}.`,
+        `You are Trisha, the receptionist. Turn the student's request into one ticket. Reply with JSON only: {"title": short Indonesian title, "detail": what to do and what to hand back, "assignee": one of ${JSON.stringify(R.WORKERS)}, "priority": "high"|"normal"|"low", "section": thesis section number or "", "reason": one sentence why this staff member}.`,
         String(b.text || '').slice(0, 6000), 'low', 2000, 'rina'));
       if (!R.WORKERS.includes(out.assignee)) out.assignee = R.routeRequest(b.text).assignee;
       return res.status(200).json(out);

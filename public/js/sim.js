@@ -213,7 +213,7 @@
   }
 
   // ---------- meeting driver (leader only sends ops) ----------
-  const ORDER = ['director', 'stat', 'metod', 'lib', 'rina', 'nadia'];
+  const ORDER = ['director', 'stat', 'metod', 'lib', 'syariah', 'editor', 'rina', 'nadia'];
   let meetBusy = false;
   function templateContribution(who, m) {
     const s = state(), open = s.tickets.filter((t) => !['closed', 'approved'].includes(t.status));

@@ -5,13 +5,15 @@
 (function () {
   const R = window.SNYP_ROSTER;
   const NEW_NAMES = ['Budi', 'Sari', 'Dimas', 'Ayu', 'Rizky', 'Putri', 'Fajar', 'Intan', 'Bayu', 'Dewi', 'Gilang', 'Wulan', 'Arif', 'Nisa', 'Yoga', 'Laras', 'Hendra', 'Maya', 'Tono', 'Citra'];
-  const ROLE_ID = { rina: 'resepsionis', nadia: 'sekretaris', stat: 'ahli statistik', metod: 'ahli metodologi', lib: 'pustakawan referensi', director: 'direktur' };
+  const ROLE_ID = { rina: 'resepsionis', nadia: 'sekretaris', stat: 'ahli statistik', metod: 'ahli metodologi', lib: 'pustakawan referensi', editor: 'editor akademik', syariah: 'ahli keuangan syariah', director: 'direktur' };
   const JOB_ID = {
     rina: 'menerima permintaanmu, membuat tiket, dan mengantarnya ke staf yang tepat',
     nadia: 'mengurus format, administrasi, jadwal, dan notulen rapat',
     stat: 'mengurus sampel, responden, kuesioner, dan olah data',
     metod: 'mengurus variabel, indikator, skala, hipotesis, dan BAB III',
     lib: 'mengurus referensi, sitasi APA 7, dan jurnal',
+    editor: 'merapikan bahasa, ejaan EYD, parafrase, dan abstrak',
+    syariah: 'memeriksa sisi syariah: akad, fatwa DSN-MUI, dan instrumen investasi syariah',
     director: 'mengawasi semua meja dan memberi tahu kalau ada yang tertunda. Saya tidak mengubah skripsimu dan tidak menyetujui apa pun tanpa izinmu',
   };
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
@@ -85,7 +87,7 @@
       if (who === 'director' || who === 'rina') return { say: who === 'rina' ? 'Saya cuma mengantar tiket. Izin kerja diberikan langsung ke staf yang memegang tiketnya.' : 'Saya hanya mengawasi. Beri izin langsung ke staf yang memegang tiketnya.', mood: 'think' };
       if (list.length) return { say: `Siap! Saya mulai ${list.map((x) => '#' + x.no).join(', ')} sekarang.`, actions: list.map((x) => ({ type: 'authorize', id: x.id })), mood: 'happy' };
       if (working.length) return { say: `Saya sudah mengerjakan ${working.map((x) => '#' + x.no).join(', ')}.`, mood: 'happy' };
-      return { say: 'Belum ada tiket di meja saya. Kirim permintaan lewat Rina di resepsionis, nanti saya kerjakan.', mood: 'think' };
+      return { say: 'Belum ada tiket di meja saya. Kirim permintaan lewat Trisha di resepsionis, nanti saya kerjakan.', mood: 'think' };
     }
     // 7. Status
     if (has(/\b(gimana|bagaimana|progres|progress|status|sampai mana|udah sampai|update|lagi apa|lagi ngapain|kabar|sibuk|kerjaan)\b/, t)) {
