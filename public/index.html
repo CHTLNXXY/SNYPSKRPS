@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="id">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,9 +10,9 @@
 <div id="login" class="login" hidden>
   <form id="loginForm" class="card">
     <h1>SNYP University</h1>
-    <p>Your virtual thesis office. Enter the office password.</p>
+    <p id="loginText">Your virtual thesis office. Enter the office password.</p>
     <input id="pw" type="password" autocomplete="current-password" placeholder="Password" required>
-    <button type="submit">Enter</button>
+    <button type="submit" id="loginBtn">Enter</button>
     <p id="loginErr" class="err"></p>
   </form>
 </div>
@@ -23,6 +23,7 @@
     <span id="storage" class="pill"></span>
     <span id="ai" class="pill"></span>
     <span id="leader" class="pill muted"></span>
+    <button id="lang" class="pill langbtn" type="button" title="Bahasa / Language">EN</button>
   </header>
   <main>
     <section class="office">
@@ -31,20 +32,25 @@
     </section>
     <aside class="panel">
       <nav id="tabs">
-        <button data-tab="reception" class="on">Reception</button>
-        <button data-tab="tickets">Tickets <span id="tcount"></span></button>
-        <button data-tab="meeting">Meeting</button>
-        <button data-tab="docs">Documents</button>
-        <button data-tab="activity">Activity</button>
-        <button data-tab="backup">Backup</button>
-        <button data-tab="settings">Settings</button>
+        <button data-tab="reception" class="on"><span class="tl">Reception</span></button>
+        <button data-tab="tickets"><span class="tl">Tickets</span> <span id="tcount"></span></button>
+        <button data-tab="chat"><span class="tl">Talk</span></button>
+        <button data-tab="meeting"><span class="tl">Meeting</span></button>
+        <button data-tab="report"><span class="tl">Laporan</span></button>
+        <button data-tab="copier"><span class="tl">Fotokopi</span></button>
+        <button data-tab="docs"><span class="tl">Documents</span></button>
+        <button data-tab="activity"><span class="tl">Activity</span></button>
+        <button data-tab="backup"><span class="tl">Backup</span></button>
+        <button data-tab="settings"><span class="tl">Settings</span></button>
       </nav>
       <div id="view"></div>
     </aside>
   </main>
 </div>
 
+<script src="js/i18n.js"></script>
 <script src="js/roster.js"></script>
+<script src="js/talk.js"></script>
 <script src="js/world.js"></script>
 <script src="js/api.js"></script>
 <script src="js/sim.js"></script>
