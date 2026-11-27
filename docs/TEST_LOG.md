@@ -40,3 +40,14 @@ was tested on the real Vercel, Upstash or GitHub services yet, because those nee
 5. **AI mode** (`ANTHROPIC_API_KEY`): Rina's AI routing, staff-drafted results, AI meeting views and minutes. Without a key the endpoint correctly reports "AI off" (backend 12).
 
 These are the checks in `DEPLOY.md` step 6 (First run).
+
+## 27 Nov 2026: Indonesian language, compiled thesis, AI package, photocopier
+- Backend + Redis protocol: 31/31 pass (adds photocopier exports, AI package, current-thesis selection, draft check on the compiled thesis without duplicate tickets).
+- Browser (Playwright): 11/11 pass (adds rooftop screen → report, photocopier Word/Excel/PDF downloads, language switch ID/EN remembered after reload).
+- SKRIPSI_TERSUSUN_v1.docx: built from the draft (13 Oct) + BAB.docx (26 Nov) with python-docx; table of contents refreshed through LibreOffice; rendered to PDF (40 pages) and checked visually. Originals unchanged.
+
+## 27 Nov 2026 (b): talk to staff, rename/fire, SKRIPSI_TERSUSUN_v2
+- Backend + Redis protocol: 31/31 pass (staff names and the "fired" record validated server-side; draft check now checks the v2 thesis, routes [CEK: …] notes to the Librarian and accepts book references without a URL).
+- Browser (Playwright): 12/12 pass. New test: in the Talk tab the Statistician answers "gimana progresnya?" with the real ticket status, apologises to "lemot banget", asks what to change on "ga setuju", starts the waiting ticket on "mulai", becomes "Budi" on "namamu sekarang Budi", and on "kamu dipecat, ganti dengan Sari" (after the confirm box) walks out of the front door; Sari walks in, introduces herself, and the firing is in the activity log.
+- Not tested: the AI chat reply (`task: 'chat'`, only used when no rule matches and ANTHROPIC_API_KEY is set).
+- SKRIPSI_TERSUSUN_v2.docx: Draft_Skripsi_v2_penanda_warna + BAB I/2.1.1–2.1.2 from BAB.docx + skeletons; TOC refreshed through LibreOffice (50 pages). Originals unchanged; v1 kept.
