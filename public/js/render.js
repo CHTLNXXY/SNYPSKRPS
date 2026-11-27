@@ -1,5 +1,6 @@
 // Draws the office artwork and the people moving in it.
 (function () {
+  const T = (en, id) => (window.SNYP_I18N ? window.SNYP_I18N.L(en, id) : en);
   const Wd = window.SNYP_WORLD, R = window.SNYP_ROSTER, SIM = window.SNYP_SIM, API = window.SNYP_API;
   const CW = Wd.IMG.w, CH = Wd.IMG.h;
   const STATUS_COLOR = { received: '#b9a37a', delivered: '#e8a33d', authorized: '#4f8fd9', working: '#3f7ac4', ready: '#3aa66a', revision: '#d9534f' };
@@ -26,7 +27,7 @@
   function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 
   function caveman(c, now) {
-    const L = LOOK[c.id] || LOOK.owner, st = R.STAFF[c.id] || { name: 'You' };
+    const L = LOOK[c.id] || LOOK.owner, st = R.STAFF[c.id] || { name: T('You', 'Kamu') };
     const sitting = !c.walking && ['sit', 'work', 'ready', 'waiting', 'night-wait'].includes(c.pose);
     const x = c.x, y = c.y, f = c.facing || 1;
     ctx.save(); ctx.globalAlpha = c.alpha == null ? 1 : c.alpha;
@@ -62,11 +63,14 @@
     const badge = { ready: ['#3aa66a', '✓'], waiting: ['#e8a33d', '?'], 'night-wait': ['#3c4f80', '☾'] }[c.pose] || (c.pose === 'work' && !c.walking ? ['#3f7ac4', '…'] : null);
     let by = headY - 6;
     if (badge) { by = headY - 14 - (c.pose === 'ready' ? Math.abs(Math.sin(now / 300)) * 5 : 0); ctx.fillStyle = badge[0]; ctx.beginPath(); ctx.arc(x, by, 10, 0, 7); ctx.fill(); ctx.fillStyle = '#fff'; ctx.font = '700 13px system-ui'; ctx.textAlign = 'center'; ctx.fillText(badge[1], x, by + 4.5); by -= 12; }
+    // mood while talking to you
+    if (c.mood && c.mood.until > now) { const e = { sad: '😟', happy: '😊', think: '🤔' }[c.mood.m]; if (e) { ctx.font = '18px system-ui'; ctx.textAlign = 'center'; ctx.fillText(e, x + 16, headY - 2); by = Math.min(by, headY - 20); } }
     // name tag
+    const name = c.nameOverride || st.name;
     ctx.font = '700 12px system-ui'; ctx.textAlign = 'center';
-    const tw = ctx.measureText(st.name).width + 10;
+    const tw = ctx.measureText(name).width + 10;
     ctx.fillStyle = 'rgba(30,20,10,.72)'; roundRect(x - tw / 2, y + 6, tw, 16, 8); ctx.fill();
-    ctx.fillStyle = '#ffe9c4'; ctx.fillText(st.name, x, y + 18);
+    ctx.fillStyle = '#ffe9c4'; ctx.fillText(name, x, y + 18);
     if (c.bubble) bubble(x, by, c.bubble.text);
   }
 
@@ -98,6 +102,8 @@
   // skewed onto the screen's parallelogram in the artwork.
   const SCR = { x: 783, y: 54, ux: [306, 39], vy: 134, W: 640, H: 280 };
   const SHORT = { received: 'Di resepsionis', delivered: 'Tunggu izin', authorized: 'Diizinkan', working: 'Dikerjakan', ready: 'Siap disetujui', revision: 'Revisi', approved: 'Disetujui', closed: 'Ditutup' };
+  const SHORT_EN = { received: 'At reception', delivered: 'Waiting', authorized: 'Authorized', working: 'Working', ready: 'Ready', revision: 'Revision', approved: 'Approved', closed: 'Closed' };
+  const lab = (k) => T(SHORT_EN[k] || k, SHORT[k] || k);
   function clip(t, n) { t = String(t || '').replace(/\s+/g, ' '); return t.length > n ? t.slice(0, n - 1) + '…' : t; }
   function screen(data) {
     const W = SCR.W, H = SCR.H;
@@ -109,11 +115,11 @@
     const tickets = data.tickets || [];
     ctx.fillStyle = '#5a3416'; ctx.fillRect(0, 0, W, 40);
     ctx.fillStyle = '#ffe9c2'; ctx.font = '700 24px system-ui';
-    ctx.fillText(m ? clip('Rapat: ' + m.topic, 44) : 'Laporan SNYP University', 14, 28);
+    ctx.fillText(m ? clip(T('Meeting: ', 'Rapat: ') + m.topic, 44) : T('SNYP University Report', 'Laporan SNYP University'), 14, 28);
     if (m) {
       let y = 70;
-      const lines = m.minutes ? m.minutes.split('\n').filter(Boolean) : (m.contributions || []).map((c) => ((R.STAFF[c.who] || { name: 'You' }).name) + ': ' + c.text);
-      ctx.fillStyle = '#7a5530'; ctx.font = '600 17px system-ui'; ctx.fillText(m.minutes ? 'Notulen (Nadia)' : 'Diskusi', 14, y - 8 - 6); 
+      const lines = m.minutes ? m.minutes.split('\n').filter(Boolean) : (m.contributions || []).map((c) => ((R.STAFF[c.who] || { name: T('You', 'Kamu') }).name) + ': ' + c.text);
+      ctx.fillStyle = '#7a5530'; ctx.font = '600 17px system-ui'; ctx.fillText(m.minutes ? T('Minutes (Nadia)', 'Notulen (Nadia)') : T('Discussion', 'Diskusi'), 14, y - 8 - 6); 
       ctx.font = '18px system-ui'; ctx.fillStyle = '#2b1d12';
       for (const l of lines.slice(-6)) { ctx.fillText(clip(l, 62), 14, y + 10); y += 28; }
       if ((m.actions || []).length) { ctx.fillStyle = '#a3461f'; ctx.font = '700 18px system-ui'; ctx.fillText(clip('Action: ' + m.actions.map((a) => a.text).join(' · '), 60), 14, H - 14); }
@@ -125,23 +131,41 @@
       for (const [k, n] of groups.concat([['approved', done]])) {
         const col = STATUS_COLOR[k] || '#3aa66a';
         ctx.fillStyle = col; ctx.font = '800 34px system-ui'; ctx.fillText(String(n), x, 84);
-        ctx.fillStyle = '#5b4632'; ctx.font = '600 13px system-ui'; ctx.fillText(k === 'approved' ? 'Selesai' : SHORT[k], x, 102);
+        ctx.fillStyle = '#5b4632'; ctx.font = '600 13px system-ui'; ctx.fillText(k === 'approved' ? T('Done', 'Selesai') : lab(k), x, 102);
         x += 104;
       }
       let y = 134;
       ctx.font = '600 16px system-ui'; ctx.fillStyle = '#7a5530';
-      ctx.fillText(open.length ? `Tiket terbuka (${open.length})` : 'Tidak ada tiket terbuka', 14, y - 8);
+      ctx.fillText(open.length ? T(`Open tickets (${open.length})`, `Tiket terbuka (${open.length})`) : T('No open tickets', 'Tidak ada tiket terbuka'), 14, y - 8);
       for (const t of open.sort((a, b) => a.no - b.no).slice(0, 5)) {
         ctx.fillStyle = STATUS_COLOR[t.status] || '#888'; ctx.fillRect(14, y + 2, 10, 18);
         ctx.fillStyle = '#2b1d12'; ctx.font = '700 17px system-ui'; ctx.fillText('#' + t.no, 30, y + 17);
         ctx.font = '17px system-ui'; ctx.fillText(clip(`${(R.STAFF[t.assignee] || { name: '?' }).name} · ${t.title}`, 44), 70, y + 17);
-        ctx.fillStyle = '#7a5530'; ctx.font = '600 14px system-ui'; ctx.textAlign = 'right'; ctx.fillText(SHORT[t.status] || t.status, W - 12, y + 17); ctx.textAlign = 'left';
+        ctx.fillStyle = '#7a5530'; ctx.font = '600 14px system-ui'; ctx.textAlign = 'right'; ctx.fillText(lab(t.status), W - 12, y + 17); ctx.textAlign = 'left';
         y += 26;
       }
       const st = data.state || {};
-      if (st.lastCheckedAt) { ctx.fillStyle = '#8a6d4d'; ctx.font = '13px system-ui'; ctx.fillText(clip('Cek draf terakhir: ' + new Date(st.lastCheckedAt).toLocaleString('id-ID') + ' · ' + st.lastCheckedFile, 80), 14, H - 8); }
+      ctx.fillStyle = '#ffd59a'; ctx.font = '700 15px system-ui'; ctx.textAlign = 'right'; ctx.fillText(T('Click the screen to enlarge ▸', 'Klik layar untuk memperbesar ▸'), W - 12, 28 + 0); ctx.textAlign = 'left';
+      if (st.lastCheckedAt) { ctx.fillStyle = '#8a6d4d'; ctx.font = '13px system-ui'; ctx.fillText(clip(T('Last draft check: ', 'Cek draf terakhir: ') + new Date(st.lastCheckedAt).toLocaleString(T('en-GB', 'id-ID')) + ' · ' + st.lastCheckedFile, 80), 14, H - 8); }
     }
     ctx.restore();
+  }
+  const PRINTER = { x0: 1128, y0: 568, x1: 1205, y1: 670 };
+  let printerFlash = 0;
+  function flashPrinter() { printerFlash = performance.now(); }
+  function onPrinter(evt) {
+    const r = canvas.getBoundingClientRect(), mx = (evt.clientX - r.left) * CW / r.width, my = (evt.clientY - r.top) * CH / r.height;
+    return mx >= PRINTER.x0 && mx <= PRINTER.x1 && my >= PRINTER.y0 && my <= PRINTER.y1;
+  }
+  function printerLabel(now) {
+    const cx = (PRINTER.x0 + PRINTER.x1) / 2;
+    const k = printerFlash && now - printerFlash < 2500 ? 1 - (now - printerFlash) / 2500 : 0;
+    if (k) { const g = ctx.createRadialGradient(cx, 610, 4, cx, 610, 70); g.addColorStop(0, `rgba(120,220,255,${0.6 * k})`); g.addColorStop(1, 'rgba(120,220,255,0)'); ctx.fillStyle = g; ctx.fillRect(cx - 70, 540, 140, 140); }
+    ctx.font = '700 13px system-ui'; ctx.textAlign = 'center';
+    const txt = k ? T('Printing…', 'Mencetak…') : T('🖨 Copier', '🖨 Fotokopi');
+    const tw = ctx.measureText(txt).width + 12;
+    ctx.fillStyle = 'rgba(0,0,0,.6)'; roundRect(cx - tw / 2, PRINTER.y0 - 22, tw, 18, 9); ctx.fill();
+    ctx.fillStyle = '#e6f6ff'; ctx.fillText(txt, cx, PRINTER.y0 - 9); ctx.textAlign = 'left';
   }
   function onScreen(evt) {
     const r = canvas.getBoundingClientRect(), mx = (evt.clientX - r.left) * CW / r.width, my = (evt.clientY - r.top) * CH / r.height;
@@ -160,8 +184,9 @@
       ctx.fillText('Gambar kantor tidak ditemukan: public/' + Wd.IMG.src, CW / 2, CH / 2 - 20);
       ctx.font = '22px sans-serif'; ctx.fillText('Upload office.webp ke folder public/img/ di GitHub, lalu tunggu redeploy.', CW / 2, CH / 2 + 20); ctx.restore(); }
     ctx.font = '700 16px system-ui'; ctx.textAlign = 'left';
-    for (const F of Wd.FLOORS) { ctx.fillStyle = 'rgba(0,0,0,.55)'; const tw = ctx.measureText(F.name).width + 16; roundRect(F.label[0] - 8, F.label[1] - 17, tw, 24, 12); ctx.fill(); ctx.fillStyle = '#ffe2b0'; ctx.fillText(F.name, F.label[0], F.label[1]); }
+    for (const F of Wd.FLOORS) { ctx.fillStyle = 'rgba(0,0,0,.55)'; const tw = ctx.measureText(T(F.name, F.id)).width + 16; roundRect(F.label[0] - 8, F.label[1] - 17, tw, 24, 12); ctx.fill(); ctx.fillStyle = '#ffe2b0'; ctx.fillText(T(F.name, F.id), F.label[0], F.label[1]); }
     screen(data);
+    printerLabel(now);
     papers(data);
     const chars = Object.values(SIM.chars).filter((c) => c.visible).sort((a, b) => a.y - b.y);
     for (const c of chars) caveman(c, now);
@@ -170,7 +195,7 @@
       ctx.globalCompositeOperation = 'lighter';
       for (const [lx, ly] of Wd.LIGHTS) { const g = ctx.createRadialGradient(lx, ly, 2, lx, ly, 110); g.addColorStop(0, 'rgba(255,170,60,.35)'); g.addColorStop(1, 'rgba(255,170,60,0)'); ctx.fillStyle = g; ctx.fillRect(lx - 110, ly - 110, 220, 220); }
       ctx.globalCompositeOperation = 'source-over';
-      ctx.fillStyle = '#ffe9a8'; ctx.font = '700 18px system-ui'; ctx.textAlign = 'right'; ctx.fillText('☾ Night Shift', CW - 16, 28);
+      ctx.fillStyle = '#ffe9a8'; ctx.font = '700 18px system-ui'; ctx.textAlign = 'right'; ctx.fillText(T('☾ Night Shift', '☾ Shift Malam'), CW - 16, 28);
     }
     requestAnimationFrame(frame);
   }
@@ -181,5 +206,5 @@
     for (const c of Object.values(SIM.chars)) { if (!c.visible) continue; const d = Math.hypot(mx - c.x, my - (c.y - 30)); if (d < bd) { bd = d; best = c; } }
     return best;
   }
-  window.SNYP_RENDER = { setup, hit, onScreen, CW, CH };
+  window.SNYP_RENDER = { setup, hit, onScreen, onPrinter, flashPrinter, CW, CH };
 })();

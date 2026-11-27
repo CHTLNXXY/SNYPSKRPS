@@ -6,9 +6,9 @@
   const IMG = { src: 'img/office.webp', w: 1536, h: 1024 };
   const UNIT = 28; // pixels per "tile" of walking speed
   const FLOORS = [
-    { name: 'Floor 1 · Lobby & Reception', label: [40, 1000] },
-    { name: 'Floor 2 · Staff Office', label: [860, 975] },
-    { name: 'Floor 3 · Rooftop Meeting', label: [40, 420] },
+    { name: 'Floor 1 · Lobby & Reception', id: 'Lantai 1 · Lobi & Resepsionis', label: [40, 1000] },
+    { name: 'Floor 2 · Staff Office', id: 'Lantai 2 · Ruang Staf', label: [860, 975] },
+    { name: 'Floor 3 · Rooftop Meeting', id: 'Lantai 3 · Rapat Rooftop', label: [40, 420] },
   ];
 
   // Waypoints: [floor, x, y]

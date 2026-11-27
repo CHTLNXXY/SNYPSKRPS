@@ -55,6 +55,11 @@
   const MEETING_STATUS = ['called', 'gathering', 'in_session', 'minutes', 'ended'];
   const ACTORS = ['owner', 'system', ...Object.keys(STAFF)];
 
-  const api = { STAFF, WORKERS, STATUS, TRANSITIONS, canTransition, routeRequest, MEETING_STATUS, ACTORS };
+  // Names you gave your staff (Settings → names) replace the defaults everywhere.
+  const DEFAULT_NAMES = Object.fromEntries(Object.entries(STAFF).map(([k, v]) => [k, v.name]));
+  function applyNames(names) {
+    for (const k of Object.keys(STAFF)) STAFF[k].name = (names && typeof names[k] === 'string' && names[k].trim()) ? names[k].trim().slice(0, 24) : DEFAULT_NAMES[k];
+  }
+  const api = { DEFAULT_NAMES, applyNames, STAFF, WORKERS, STATUS, TRANSITIONS, canTransition, routeRequest, MEETING_STATUS, ACTORS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.SNYP_ROSTER = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -3,6 +3,7 @@
 // and a meeting pulls everyone to the rooftop. Only the "leader" device sends state changes; other open
 // devices replay the same behaviour and wait for the leader's changes to arrive.
 (function () {
+  const T = (en, id) => (window.SNYP_I18N ? window.SNYP_I18N.L(en, id) : en);
   const Wd = window.SNYP_WORLD, R = window.SNYP_ROSTER, API = window.SNYP_API;
   const params = new URLSearchParams(location.search);
   const SPEED = Math.max(1, Math.min(120, parseFloat(params.get('speed') || '1')));
@@ -66,7 +67,7 @@
   const meetingJob = (c) => ({
     name: 'meeting', valid: () => !!activeMeeting(),
     *run() {
-      if (c.id !== 'owner') say(c, 'Meeting called. Heading up to the rooftop.', 2500);
+      if (c.id !== 'owner') say(c, T('Meeting called. Heading up to the rooftop.', 'Ada rapat. Naik ke rooftop.'), 2500);
       c.pose = 'stand';
       yield* go(c, 'seat_' + c.id);
       c.pose = 'sit'; ev(c.id, 'seated');
@@ -91,14 +92,14 @@
       *run() {
         yield* go(c, 'reception'); c.pose = 'stand';
         if (ticket(t.id).status !== 'received' || ticket(t.id).assignee) return;
-        say(c, `New request #${t.no}. Let me read it…`, 3000);
+        say(c, T(`New request #${t.no}. Let me read it…`, `Permintaan baru #${t.no}. Saya baca dulu…`), 3000);
         yield sleep(2500);
         let route = R.routeRequest(t.title + ' ' + t.detail);
         const ai = yield* aiOrNull({ task: 'route', text: t.title + '\n' + t.detail });
         if (ai && R.WORKERS.includes(ai.assignee)) route = { assignee: ai.assignee, reason: ai.reason || 'AI routing' };
         yield* act('ticket.route', 'rina', { id: t.id, assignee: route.assignee, reason: route.reason }, () => (ticket(t.id) || {}).assignee);
         const a = (ticket(t.id) || {}).assignee || route.assignee;
-        say(c, `#${t.no} is for ${R.STAFF[a].name}. I'll take it up.`, 3000);
+        say(c, T(`#${t.no} is for ${R.STAFF[a].name}. I'll take it up.`, `#${t.no} untuk ${R.STAFF[a].name}. Saya antar ke atas.`), 3000);
         ev('rina', `routed #${t.no} to ${a}`);
       },
     };
@@ -110,11 +111,11 @@
         const to = ticket(t.id).assignee;
         yield* go(c, 'front_' + to);
         if (ticket(t.id).status !== 'received') { c.carrying = null; return; }
-        say(c, `Ticket #${t.no} for you, ${R.STAFF[to].name}.`, 3500);
+        say(c, T(`Ticket #${t.no} for you, ${R.STAFF[to].name}.`, `Tiket #${t.no} untukmu, ${R.STAFF[to].name}.`), 3500);
         yield sleep(1200);
         yield* act('ticket.transition', 'rina', { id: t.id, to: 'delivered' }, () => (ticket(t.id) || {}).status !== 'received');
         c.carrying = null; ev('rina', `delivered #${t.no} to ${to}`);
-        if (chars[to]) say(chars[to], `Got #${t.no}. I'll start once you give the go-ahead.`, 4000);
+        if (chars[to]) say(chars[to], T(`Got #${t.no}. I'll start once you give the go-ahead.`, `#${t.no} diterima. Saya mulai setelah kamu beri izin.`), 4000);
         yield sleep(1500);
         yield* go(c, 'reception');
       },
@@ -131,7 +132,7 @@
       *run() {
         c.pose = 'stand'; yield* go(c, Wd.HOME[c.id]); c.pose = 'sit';
         if (!['authorized', 'revision'].includes(ticket(start.id).status)) return;
-        say(c, start.status === 'revision' ? `Revising #${start.no}.` : `Go-ahead received. Starting #${start.no}.`, 3000);
+        say(c, start.status === 'revision' ? T(`Revising #${start.no}.`, `Merevisi #${start.no}.`) : T(`Go-ahead received. Starting #${start.no}.`, `Izin diterima. Mulai #${start.no}.`), 3000);
         yield sleep(1500);
         yield* act('ticket.transition', c.id, { id: start.id, to: 'working' }, () => (ticket(start.id) || {}).status === 'working');
       },
@@ -146,23 +147,23 @@
           const t = ticket(work.id); if (!t || t.status !== 'working') return;
           if (t.pendingResult) { result = t.pendingResult; break; }
           if (API.S.ai && API.S.leader && !asked) {
-            asked = true; say(c, `Working on #${t.no}…`, 3000);
+            asked = true; say(c, T(`Working on #${t.no}…`, `Mengerjakan #${t.no}…`), 3000);
             const out = yield* aiOrNull({ task: 'work', ticketId: t.id });
             if (out && out.result) { result = out.result; break; }
           }
-          if (!API.S.ai && performance.now() - nudged > ms(90000)) { nudged = performance.now(); say(c, `Working on #${t.no}. The AI is off, so hand me the result text in the Tickets tab when it's ready.`, 6000); }
+          if (!API.S.ai && performance.now() - nudged > ms(90000)) { nudged = performance.now(); say(c, T(`Working on #${t.no}. The AI is off, so hand me the result text in the Tickets tab when it's ready.`, `Mengerjakan #${t.no}. AI mati, jadi serahkan teks hasilnya di tab Tiket kalau sudah siap.`), 6000); }
           if (performance.now() - lastTrip > ms(40000)) {
             lastTrip = performance.now(); c.pose = 'stand';
-            yield* go(c, TRIP[c.id]); say(c, TRIP[c.id] === 'shelf' ? 'Checking the journal shelf…' : 'Printing working notes…', 2500); yield sleep(2500);
+            yield* go(c, TRIP[c.id]); say(c, TRIP[c.id] === 'shelf' ? T('Checking the journal shelf…', 'Cek rak jurnal…') : T('Printing working notes…', 'Mencetak catatan kerja…'), 2500); yield sleep(2500);
             yield* go(c, Wd.HOME[c.id]); c.pose = 'work';
           }
           yield sleep(1000);
         }
-        c.pose = 'stand'; yield* go(c, 'printer'); say(c, `Printing the result for #${work.no}.`, 2500); yield sleep(2000);
+        c.pose = 'stand'; yield* go(c, 'printer'); say(c, T(`Printing the result for #${work.no}.`, `Mencetak hasil #${work.no}.`), 2500); yield sleep(2000);
         c.carrying = work.id; yield* go(c, Wd.HOME[c.id]); c.carrying = null; c.pose = 'sit';
         if (ticket(work.id).status !== 'working') return;
         yield* act('ticket.transition', c.id, { id: work.id, to: 'ready', result }, () => (ticket(work.id) || {}).status !== 'working');
-        say(c, `#${work.no} is ready for your approval.`, 4000);
+        say(c, T(`#${work.no} is ready for your approval.`, `#${work.no} siap kamu setujui.`), 4000);
       },
     };
     return null;
@@ -197,7 +198,7 @@
           const issues = issuesFor(who);
           const name = R.STAFF[who].name;
           ev('director', 'inspected ' + who);
-          if (!issues.length) say(c, `${name}: ${who === 'rina' ? 'reception is clear' : 'work is on track'}.`, 2500);
+          if (!issues.length) say(c, `${name}: ${who === 'rina' ? T('reception is clear', 'resepsionis aman') : T('work is on track', 'pekerjaan sesuai jalur')}.`, 2500);
           else say(c, `${name}: ${issues[0].text}`, 4500);
           for (const i of issues) {
             if (alreadyNoted(i.t, i.tag)) continue;
@@ -257,13 +258,13 @@
     }
     if (m.status === 'minutes' && !m.minutes) {
       return run((async () => {
-        chars.nadia.pose = 'work'; say(chars.nadia, 'Writing the minutes…', 3000);
+        chars.nadia.pose = 'work'; say(chars.nadia, T('Writing the minutes…', 'Menulis notulen…'), 3000);
         await new Promise((r) => setTimeout(r, ms(2500)));
         let out = null;
         if (API.S.ai) { try { out = await API.ai({ task: 'minutes', meetingId: m.id }); } catch (e) { out = null; } }
         if (!out || typeof out.minutes !== 'string') out = templateMinutes(m);
         await API.op('meeting.minutes', 'nadia', { id: m.id, minutes: out.minutes, actions: out.actions || [] });
-        chars.nadia.pose = 'sit'; say(chars.nadia, 'Minutes are recorded. Action items can become tickets.', 4000);
+        chars.nadia.pose = 'sit'; say(chars.nadia, T('Minutes are recorded. Action items can become tickets.', 'Notulen tercatat. Action item bisa dijadikan tiket.'), 4000);
       })());
     }
   }
@@ -279,8 +280,41 @@
     }
   }
 
+  // ---------- staff replaced ("kamu dipecat"): the old one walks out, the new one walks in ----------
+  const seenFired = {};
+  let firedPrimed = false;
+  function rehireDue(c) {
+    const f = ((state().settings || {}).fired || {})[c.id];
+    if (!firedPrimed) { // ignore old firings when the page opens, unless they just happened
+      firedPrimed = true;
+      for (const [k, v] of Object.entries((state().settings || {}).fired || {})) if (v && Date.now() - Number(v.at) > 120000) seenFired[k] = v.at;
+    }
+    if (!f || !f.at || seenFired[c.id] === f.at) return null;
+    seenFired[c.id] = f.at;
+    return f;
+  }
+  const firedPending = (c) => { const f = ((state().settings || {}).fired || {})[c.id]; return !!(firedPrimed && f && f.at && seenFired[c.id] !== f.at); };
+  const rehireJob = (c, f) => ({
+    name: 'rehire', valid: () => !activeMeeting(),
+    *run() {
+      c.nameOverride = f.oldName || null; c.pose = 'stand';
+      yield { sleep: 2500 };
+      say(c, T('Goodbye, everyone…', 'Pamit dulu ya, semuanya…'), 3000);
+      yield* go(c, 'door');
+      c.visible = false; ev(c.id, 'left: ' + (f.oldName || ''));
+      yield { sleep: 1800 };
+      c.nameOverride = null; c.visible = true; ev(c.id, 'arrived: ' + (f.newName || R.STAFF[c.id].name));
+      say(c, c.afterHire || T(`Hi, I'm ${R.STAFF[c.id].name}, the new one here.`, `Halo, saya ${R.STAFF[c.id].name}, staf baru di sini.`), 6000);
+      c.afterHire = null;
+      yield { sleep: 2000 };
+      yield* go(c, Wd.HOME[c.id]);
+      c.pose = c.id === 'rina' ? 'stand' : 'sit';
+    },
+  });
+
   function plan(c) {
     if (activeMeeting()) return meetingJob(c);
+    if (c.id !== 'owner' && R.STAFF[c.id]) { const f = rehireDue(c); if (f) return rehireJob(c, f); }
     if (c.id === 'owner') return c.visible ? homeJob(c) : null;
     let j = c.id === 'rina' ? planRina(c) : c.id === 'director' ? planDirector(c) : planStaff(c);
     if (j) return j;
@@ -291,7 +325,8 @@
 
   // ---------- main loop ----------
   function stepJob(c, now) {
-    if (c.job && !c.job.valid()) { c.job = null; c.wait = null; }
+    if (c.job && c.jobName !== 'rehire' && c.jobName !== 'meeting' && firedPending(c)) { c.job = null; c.wait = null; c.path = []; }
+    if (c.job && !c.job.valid()) { if (c.jobName === 'rehire') { c.nameOverride = null; c.visible = true; } c.job = null; c.wait = null; }
     if (!c.job) {
       if (c.id === 'owner' && activeMeeting() && !c.visible) { Object.assign(c, { ...Wd.SPOTS.stairs2, z: 2, visible: true, path: [] }); }
       const j = plan(c);
@@ -346,5 +381,19 @@
   }
   setInterval(tick, 50);
 
-  window.SNYP_SIM = { chars, log, SPEED, LIMITS, issuesFor, templateContribution };
+  // Talking to a staff member: show their answer as a bubble with a mood for a few seconds.
+  function speak(id, text, mood) {
+    const c = chars[id]; if (!c || !text) return;
+    say(c, text, Math.min(12000, 3000 + text.length * 60));
+    c.mood = mood ? { m: mood, until: performance.now() + 9000 } : null;
+    ev(id, 'talk ' + (mood || ''));
+  }
+  // What the new hire says when they walk in (falls back to a plain bubble if no walk-in happens).
+  function later(id, text) {
+    const c = chars[id]; if (!c) return;
+    c.afterHire = text;
+    setTimeout(() => { if (c.afterHire === text && c.jobName !== 'rehire') { c.afterHire = null; say(c, text, 6000); } }, 20000);
+  }
+
+  window.SNYP_SIM = { chars, log, SPEED, LIMITS, issuesFor, templateContribution, speak, later };
 })();
