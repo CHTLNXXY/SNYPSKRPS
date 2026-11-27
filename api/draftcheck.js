@@ -14,9 +14,8 @@ module.exports = async (req, res) => {
     let p = body(req).path;
     if (!p) {
       const files = await archive.list();
-      const drafts = files.filter((f) => /^01_Thesis_Draft\/.*\.docx$/i.test(f.path));
-      if (!drafts.length) return res.status(404).json({ error: 'No .docx found in 01_Thesis_Draft' });
-      p = drafts[drafts.length - 1].path;
+      p = archive.currentThesis(files);
+      if (!p) return res.status(404).json({ error: 'No .docx found in 01_Thesis_Draft' });
     }
     const buf = await archive.readBytes(p);
     const result = check(buf, p.split('/').pop());

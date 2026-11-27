@@ -1,6 +1,6 @@
 // Optional AI "brain" for the staff. Only active when ANTHROPIC_API_KEY is set in Vercel.
 // Without it this returns 503 and the office falls back to rule-based routing and templates.
-// POST /api/ai {task: 'route', text} | {task: 'work', ticketId} | {task: 'meeting', meetingId, who} | {task: 'minutes', meetingId}
+// POST /api/ai {task: 'chat', who, text} | {task: 'route', text} | {task: 'work', ticketId} | {task: 'meeting', meetingId, who} | {task: 'minutes', meetingId}
 const { requireAuth } = require('../lib/auth');
 const { getStore } = require('../lib/store');
 const { readAll } = require('../lib/ops');
@@ -11,9 +11,9 @@ const { body, fail } = require('../lib/http');
 
 const MODEL = process.env.SNYP_MODEL || 'claude-opus-5-5';
 
-const OFFICE = `You are part of SNYP University, a virtual thesis office helping one student finish an Indonesian undergraduate thesis (skripsi):
+const office = () => `You are part of SNYP University, a virtual thesis office helping one student finish an Indonesian undergraduate thesis (skripsi):
 "Pengaruh Trust in AI dan AI Reliance terhadap Minat Investasi Syariah pada Pengguna Artificial Intelligence".
-Staff: Rina (receptionist), Nadia (secretary), Statistician (sampling, PLS-SEM, data), Methodologist (variables, indicators, scales, BAB III), Librarian (references, APA 7), Director (supervisor).
+Staff: ${Object.entries(R.STAFF).map(([, v]) => `${v.name} (${v.role})`).join(', ')}.
 Rules: never invent citations, page numbers, DOIs or data; if something is unknown say exactly what the student must supply. Write thesis text in formal Indonesian; write notes to the student in short, plain Indonesian.`;
 
 async function ask(system, user, effort = 'medium', maxTokens = 8000) {
@@ -23,7 +23,7 @@ async function ask(system, user, effort = 'medium', maxTokens = 8000) {
     model: MODEL, max_tokens: maxTokens,
     betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default',
     output_config: { effort },
-    system: [{ type: 'text', text: OFFICE + '\n\n' + system, cache_control: { type: 'ephemeral' } }],
+    system: [{ type: 'text', text: office() + '\n\n' + system, cache_control: { type: 'ephemeral' } }],
     messages: [{ role: 'user', content: user }],
   });
   const msg = await stream.finalMessage();
@@ -34,9 +34,9 @@ function json(text) { const m = text.match(/\{[\s\S]*\}/); if (!m) throw new Err
 
 async function draftContext(section) {
   try {
-    const files = (await archive.list()).filter((f) => /^01_Thesis_Draft\/.*\.docx$/i.test(f.path));
-    if (!files.length) return '';
-    const ps = paragraphs(await archive.readBytes(files[files.length - 1].path));
+    const path = archive.currentThesis(await archive.list());
+    if (!path) return '';
+    const ps = paragraphs(await archive.readBytes(path));
     if (!section) return '';
     const key = section === 'DAFTAR PUSTAKA' ? 'DAFTAR PUSTAKA' : section + ' ';
     const i = ps.findIndex((p, idx) => idx > 40 && p.startsWith(key));
@@ -84,6 +84,15 @@ module.exports = async (req, res) => {
       const out = json(await ask(`You are Nadia, the secretary. Write meeting minutes. Reply with JSON only: {"minutes": minutes in Indonesian with decisions, "actions": [{"text": action item, "assignee": one of ${JSON.stringify(R.WORKERS)}}]}.`,
         `Topic: ${m.topic}\nDiscussion:\n${talk}\n\nOpen tickets:\n${board}`, 'medium', 4000));
       return res.status(200).json(out);
+    }
+    if (b.task === 'chat') {
+      const who = R.STAFF[b.who];
+      if (!who) return res.status(400).json({ error: 'Unknown staff member' });
+      const mine = s.tickets.filter((t) => t.assignee === b.who && !['closed', 'approved'].includes(t.status)).map((t) => `#${t.no} [${t.status}] ${t.title}`).join('\n');
+      const hist = (s.chats[b.who] || []).slice(-10).map((m) => `${m.who === 'owner' || m.who === 'you' ? 'Student' : who.name}: ${m.text}`).join('\n');
+      const text = await ask(`You are ${who.name}, the ${who.role}, chatting casually with the student. Reply in short, friendly, casual Indonesian (1-3 sentences), in character, reacting to their mood. You cannot change the thesis, approve, start or close tickets from this chat; if they want that, tell them which word to type ("mulai", "acc", "revisi #n: ...") or which button to press. Never claim you already did something.`,
+        `Your open tickets:\n${mine || '(none)'}\n\nRecent chat:\n${hist || '(nothing yet)'}\n\nStudent now says: ${String(b.text || '').slice(0, 2000)}`, 'low', 800);
+      return res.status(200).json({ text });
     }
     res.status(400).json({ error: 'Unknown task' });
   } catch (e) { fail(res, e); }
