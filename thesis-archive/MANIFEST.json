@@ -184,6 +184,33 @@
    "pages": null,
    "pdf_title": "",
    "matches_zip": null
+  },
+  {
+   "path": "01_Thesis_Draft/Draft_Skripsi_v2_penanda_warna.docx",
+   "size": 152321,
+   "sha256": "60e6158cbc498c51b951e7d61b2341887bb15e2f21892367694bc5548375d099",
+   "pages": null,
+   "pdf_title": "",
+   "matches_zip": false,
+   "added": "2026-11-27"
+  },
+  {
+   "path": "04_Chapter_Documents/Skripsi_Kuesioner_Rencana_Sampai_Sidang.docx",
+   "size": 9838,
+   "sha256": "f18e9a246c49ade068f36dbb13c442c6d19662b5d45c271eff16dcb555e033dd",
+   "pages": null,
+   "pdf_title": "",
+   "matches_zip": false,
+   "added": "2026-11-27"
+  },
+  {
+   "path": "01_Thesis_Draft/SKRIPSI_TERSUSUN_v2.docx",
+   "size": 158522,
+   "sha256": "22e711a00e01339528f853d127c4b126e2a50abc7efc8a358677bfb48ea2ed8c",
+   "pages": null,
+   "pdf_title": "",
+   "matches_zip": false,
+   "added": "2026-11-27"
   }
  ],
  "exact_duplicates": []

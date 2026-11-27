@@ -48,3 +48,10 @@ Generated 2026-11-26 from the uploaded zip. Every file in folders 01–04 is a b
 | 04_Chapter_Documents/BAB.docx | 26,492 |  | `ac0ec005c8ab9c31` |
 | 05_Backup/ABB_original.json | 4,983 |  | `b0c1ae7c3a7c3b40` |
 | 05_Backup/CHERNOVIK_DISSERTATSII_original.zip | 9,462,332 |  | `1bb29521e7b3d29f` |
+
+## Added 27 Nov 2026
+| Path | Note |
+|---|---|
+| 01_Thesis_Draft/Draft_Skripsi_v2_penanda_warna.docx | Uploaded later. Full draft with colour markers, filled BAB III, 24 references, Lampiran 1 kuesioner. |
+| 04_Chapter_Documents/Skripsi_Kuesioner_Rencana_Sampai_Sidang.docx | Uploaded later. 6-week plan to sidang, Google Form questionnaire, BAB III text, message to supervisor. |
+| 01_Thesis_Draft/SKRIPSI_TERSUSUN_v2.docx | Compiled: Draft v2 + BAB I/2.1.1–2.1.2 from BAB.docx + skeletons. Now the current thesis. See CATATAN_PENYUSUNAN.md. |
